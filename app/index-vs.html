@@ -1,0 +1,32 @@
+<!doctype html>
+    <head>
+        <meta charset="utf-8">
+        <title>touchanimation</title>
+        <meta name="viewport" content="width=device-width">
+        <!-- build:css(.tmp) styles/main.css -->
+        <link rel="stylesheet" href="styles/main.css">
+        <!-- endbuild -->
+    </head>
+    <body>
+        <div id="block0" style="width:50px;height:50px;border: 5px solid red; position: absolute; top: 0">One</div>
+        <div id="block1" style="width:50px;height:50px;border: 5px solid green; position: absolute; top: 0">Two</div>
+        <div id="block2" style="width:50px;height:50px;border: 5px solid blue; position: absolute; top: 0">Three</div>
+
+        <!--
+        <p>
+        Performance comparison: Native slider
+        <input type="range" min="0" max="100" style="width:200px">
+        </p>
+        -->
+
+        <!-- build:js scripts/vendor.js -->
+        <!-- bower:js -->
+        <script src="scripts/web-animations.js"></script>
+        <!-- endbower -->
+        <!-- endbuild -->
+
+        <!-- build:js scripts/touch-animation.js -->
+        <script src="scripts/virtual-scroll.js"></script>
+        <!-- endbuild -->
+</body>
+</html>

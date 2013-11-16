@@ -1,0 +1,109 @@
+<!doctype html>
+    <head>
+        <meta charset="utf-8">
+        <title>touchanimation</title>
+        <meta name="viewport" content="width=device-width">
+        <!-- build:css(.tmp) styles/main.css -->
+        <link rel="stylesheet" href="styles/main.css">
+        <!-- endbuild -->
+    </head>
+    <body style="height: 400px">
+        <div style="height: 200px; margin-top: 20px; border: 1px solid black; overflow: hidden">
+        <div class="anim" style="height:600px;position:relative">
+            <div style="position:absolute;top:0;background-color:grey;height:40px;width:100%">
+                Pull to refresh
+            </div>
+            <div style="position:absolute;top:40px">
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+                <p>Hello</p>
+            </div>
+            <div style="position:absolute;bottom:0;background-color:grey;height:40px;width:100%">
+                Pull to refresh
+            </div>
+        </div>
+        </div>
+
+        <!--
+        <p>
+        Performance comparison: Native slider
+        <input type="range" min="0" max="100" style="width:200px">
+        </p>
+        -->
+
+        <!-- build:js scripts/vendor.js -->
+        <!-- bower:js -->
+        <script src="scripts/web-animations.js"></script>
+        <!-- endbower -->
+        <!-- endbuild -->
+
+        <!-- build:js scripts/touch-animation.js -->
+        <script src="scripts/utils.js"></script>
+        <script src="scripts/gesture.js"></script>
+        <script src="scripts/scroll-animation.js"></script>
+        <!-- endbuild -->
+
+        <script>
+
+            var elem = document.querySelector('.anim'),
+                    animationHeight = utils.getHeight(elem) - utils.getHeight(elem.parentNode);
+
+            var scrollAnimation = new ScrollAnimation({
+                animation: new Animation(elem, [
+                    {offset: 0, opacity: 1, transform: 'translateZ(0) translateX(0)'},
+                    {offset: 1, opacity: 0.1, transform: 'translateZ(0) translateY(-'+animationHeight+'px)'}
+                ], { duration: 2 }),
+                animationPixels: animationHeight,
+                gesture: new gesture.SlideYGesture(document.body, -1),
+                // offset in pixels!
+                gestureEaseOut: {offset: 40, factor: 5}
+            });
+
+        </script>
+</body>
+</html>
