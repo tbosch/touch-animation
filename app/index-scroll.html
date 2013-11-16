@@ -11,7 +11,7 @@
         <div style="height: 200px; margin-top: 20px; border: 1px solid black; overflow: hidden">
         <div class="anim" style="height:600px;position:relative">
             <div style="position:absolute;top:0;background-color:grey;height:40px;width:100%">
-                Pull to refresh
+                <div class="top-progress" style="position:absolute;bottom:0">Pull to refresh</div>
             </div>
             <div style="position:absolute;top:40px">
                 <p>Hello</p>
@@ -91,14 +91,33 @@
         <script>
 
             var elem = document.querySelector('.anim'),
-                    animationHeight = utils.getHeight(elem) - utils.getHeight(elem.parentNode);
+                topProgress = document.querySelector('.top-progress');
 
-            var scrollAnimation = new ScrollAnimation({
-                animation: new Animation(elem, [
-                    {offset: 0, opacity: 1, transform: 'translateZ(0) translateX(0)'},
-                    {offset: 1, opacity: 0.1, transform: 'translateZ(0) translateY(-'+animationHeight+'px)'}
-                ], { duration: 2 }),
-                animationPixels: animationHeight,
+            var topAnimation1 = new Animation(elem, [
+                {offset: 0, transform: 'translateZ(0) translateY(0)'},
+                {offset: 1, transform: 'translateZ(0) translateY(-40px)'}
+            ], 0.11);
+            var topAnimation2 = new Animation(topProgress, [
+                {offset: 0, transform: 'translateZ(0) translateX(0px)', color: 'green'},
+                {offset: 1, transform: 'translateZ(0) translateX(400px)', color: 'red'}
+            ], {
+                duration: 0.11
+            });
+            var topAnimation = new ParGroup([topAnimation1, topAnimation2]);
+            var contentAnimation = new Animation(elem, [
+                {offset: 0, transform: 'translateZ(0) translateY(-40px)'},
+                {offset: 1, transform: 'translateZ(0) translateY(-360px)'}
+            ], 1);
+            var bottomAnimation = new Animation(elem, [
+                {offset: 0, transform: 'translateZ(0) translateY(-360px)'},
+                {offset: 1, transform: 'translateZ(0) translateY(-400px)'}
+            ], 0.11);
+
+            var group = new SeqGroup([topAnimation, contentAnimation, bottomAnimation]);
+
+            new ScrollAnimation({
+                animation: group,
+                animationPixels: 400,
                 gesture: new gesture.SlideYGesture(document.body, -1),
                 // offset in pixels!
                 gestureEaseOut: {offset: 40, factor: 5}
