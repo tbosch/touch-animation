@@ -9,6 +9,8 @@
     </head>
     <body style="height: 400px">
 
+        <div class="anim" style="position:absolute">Anim</div>
+
         <!--
         <p>
         Performance comparison: Native slider
@@ -22,8 +24,28 @@
         <!-- endbower -->
         <!-- endbuild -->
 
-        <!-- build:js scripts/touch-animation.js -->
-        <!-- TODO -->
-        <!-- endbuild -->
+        <script>
+            var elm = document.querySelector('.anim');
+            var anim = new Animation(elm, [
+                {offset: 0, transform: 'translateZ(0) translateX(0px)'},
+                {offset: 1, transform: 'translateZ(0) translateX(400px)'},
+            ], 1);
+            var group = new SeqGroup([anim], { duration: 20 });
+
+            var player = document.timeline.play(group);
+
+
+            function seek(targetTime, callback) {
+                window.setTimeout(function() {
+                    console.log('seeking to '+targetTime);
+                    player.currentTime = targetTime;
+                    callback && callback();
+                },100);
+            }
+
+
+
+        </script>
+
 </body>
 </html>
