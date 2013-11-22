@@ -41,7 +41,7 @@
     <!-- endbuild -->
 
     <script>
-        var     rowCount = 14,
+        var     rowCount = 20,
                 rowsPerPage = 6;
 
 
@@ -58,7 +58,6 @@
         fillBlock(block1, 1);
 
         var     rowHeight = utils.getHeight(block0) / rowsPerPage,
-                blockHeight = rowHeight * rowsPerPage,
                 viewPortHeight = utils.getHeight(scrollViewport),
                 headerHeight = utils.getHeight(scrollHeader),
                 footerHeight = utils.getHeight(scrollFooter),
@@ -66,17 +65,22 @@
                 indicatorHeight = utils.getHeight(indicator);
 
         var headerFooterSlowDownFactor = 5,
-            headerDuration = headerHeight / (rowHeight * rowCount) * headerFooterSlowDownFactor,
-            footerDuration = footerHeight / (rowHeight * rowCount) * headerFooterSlowDownFactor;
+            headerDuration = headerHeight / viewPortHeight * headerFooterSlowDownFactor,
+            footerDuration = footerHeight / viewPortHeight * headerFooterSlowDownFactor,
+            contentDuration = (rowHeight * rowCount - viewPortHeight) / viewPortHeight;
 
+        // document.timeline.play(totalAnimation());
         new ScrollAnimation({
-            animation: new ParGroup([new SeqGroup([headerAnimation(), contentAnimation(), footerAnimation()]), indicatorAnimation()]),
-            // based on contentAnimation, which has a duration of 1.
-            pixelToTimeRatio: ((rowCount*rowHeight) - viewPortHeight) / 1,
+            animation: totalAnimation(),
+            timeToPixelRatio: viewPortHeight,
             gesture: new gesture.SlideYGesture(document.body, -1),
             headerDuration: headerDuration,
             footerDuration: footerDuration
         });
+
+        function totalAnimation() {
+            return new ParGroup([new SeqGroup([headerAnimation(), contentAnimation(), footerAnimation()]), indicatorAnimation()]);
+        }
 
         function indicatorAnimation() {
             var start = new Animation(indicator, [
@@ -86,7 +90,7 @@
             var middle = new Animation(indicator, [
                 {offset: 0, transform: 'translateZ(0) translateY(0px)'},
                 {offset: 1, transform: 'translateZ(0) translateY('+(viewPortHeight-indicatorHeight)+'px)'}
-            ], 1);
+            ], contentDuration);
             var end = new Animation(indicator, [
                 {offset: 0, transform: 'translateZ(0) translateY('+(viewPortHeight-indicatorHeight)+'px)'},
                 {offset: 1, transform: 'translateZ(0) translateY('+(viewPortHeight-indicatorHeight + indicatorHeight*0.9)+'px)'}
@@ -111,48 +115,52 @@
         }
 
         function contentAnimation() {
-            var blockAnimationHeight = 3*blockHeight,
-                blockCount = rowCount / rowsPerPage;
-            // Details about this calculation:
-            // * blockCount / 2: As we have two block
-            // * -0.5: We already show one page when we start -> half of one animation is already done
-            // * ((blockHeight - viewPortHeight) / blockAnimationHeight): Adjust for difference between blockHeight and viewportHeight
-            var blockIterations = (blockCount / 2) - 0.5 + ((blockHeight - viewPortHeight) / blockAnimationHeight);
+            var blockHeight = rowHeight * rowsPerPage;
             var block0Anim = new Animation(block0, [
                 { offset: 0, transform: 'translateZ(0) translateY('+blockHeight+'px)' },
                 { offset: 1, transform: 'translateZ(0) translateY(-'+blockHeight +'px)' }
             ], {
                 iterationStart: 0.5,
-                duration: 1 / blockIterations,
-                iterations: blockIterations
+                duration: 2*blockHeight / viewPortHeight,
+                // TODO Bug: Setting this to Infinity and adding a oniteration event listener
+                // stops the animation here!
+                iterations: 100
             });
+
             var block1Anim = new Animation(block1, [
                 { offset: 0, transform: 'translateZ(0) translateY(0px)' },
                 { offset: 1, transform: 'translateZ(0) translateY(-'+(2*blockHeight) +'px)' }
             ], {
-                duration: 1/blockIterations,
-                iterations: blockIterations
+                duration: 2*blockHeight / viewPortHeight,
+                // TODO Bug: Setting this to Infinity and adding a oniteration event listener
+                // stops the animation here!
+                iterations: 100
             });
-            // TODO: Bugs with the events (11/10/2013):
+
+            // TODO Bugs: with the events
             // - no events while scrubbing backwards
             // - no events during running velocity animation. This might be due to the fact that
             //   we reparent the animation temporarily during animation.
             var block0Events = new SeqGroup([], {
-                duration: 1/blockIterations,
-                iterations: blockIterations,
+                duration: 2*blockHeight / viewPortHeight,
+                // TODO Bug: Setting this to Infinity and adding a oniteration event listener
+                // stops the animation here!
+                iterations: 100,
                 iterationStart: 0.5,
-                // TODO: This seems to be a bug, we should not need this delay here!
+                // TODO Bug: This seems to be a bug, we should not need this delay here!
                 delay: headerDuration
             });
             var block1Events = new SeqGroup([], {
-                duration: 1/blockIterations,
-                iterations: blockIterations,
-                // TODO: This seems to be a bug, we should not need this delay here!
+                duration: 2*blockHeight / viewPortHeight,
+                // TODO Bug: Setting this to Infinity and adding a oniteration event listener
+                // stops the animation here!
+                iterations: 100,
+                // TODO Bug: This seems to be a bug, we should not need this delay here!
                 delay: headerDuration
             });
             block0Events.oniteration = function(e) {
                 fillBlock(block0, e.iterationIndex * 2);
-                // console.log('iterate0', block0Events.currentIteration, e);
+                console.log('iterate0');
             };
             block1Events.oniteration = function(e) {
                 fillBlock(block1, e.iterationIndex * 2 + 1);
@@ -160,7 +168,7 @@
             };
 
             return new ParGroup([block0Anim, block1Anim, block0Events, block1Events], {
-                duration: 1
+                duration: contentDuration
             });
         }
 
@@ -182,6 +190,7 @@
         }
 
         function fillBlock(block, pageIndex) {
+            console.log('filling block with page '+pageIndex);
             var ps = [], start = pageIndex*rowsPerPage, i=0;
             for (i=0; i<rowsPerPage; i++) {
                 ps.push('<p>'+(start + i)+'</p>')

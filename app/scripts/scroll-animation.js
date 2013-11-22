@@ -2,8 +2,8 @@
   function TouchAnimation(options) {
     var self = this;
     this.duration = options.animation.duration;
-    if (options.pixelToTimeRatio) {
-      this.pixelToTimeRatio = options.pixelToTimeRatio;
+    if (options.timeToPixelRatio) {
+      this.timeToPixelRatio = options.timeToPixelRatio;
     } else {
       this.headerDuration = options.headerDuration;
     }
@@ -20,7 +20,7 @@
         };
       }
       if (action === 'move' || action === 'start') {
-        var newTime = self.gestureStart.time + (pixelOffset / self.pixelToTimeRatio);
+        var newTime = self.gestureStart.time + (pixelOffset / self.timeToPixelRatio);
         if (self.lastGesture) {
           // TODO: Apply some smoothing over time, e.g.
           // take the last three points and calculate the average velocity...
