@@ -1,0 +1,194 @@
+<!doctype html>
+    <head>
+        <meta charset="utf-8">
+        <title>touchanimation</title>
+        <meta name="viewport" content="width=device-width">
+        <!-- build:css(.tmp) styles/main.css -->
+        <link rel="stylesheet" href="styles/main.css">
+        <!-- endbuild -->
+    </head>
+    <body style="height: 400px">
+    <div class="scroll-viewport" style="height: 200px; margin-top: 20px; border: 1px solid black; position: relative; overflow: hidden">
+        <div class="scroll-indicator" style="position:absolute;right:0;top:0;z-index:1;width:4px;height:40px;background-color:red"></div>
+        <div class="scroll-header" style="background-color:grey;height:40px;position:absolute;top:-40px;width:100%">
+            <div style="text-align: center" class="pull-to-refresh">Pull to refresh</div>
+        </div>
+        <div class="scroll-footer" style="background-color:grey;height:40px;position:absolute;top:100%;width:100%;z-index:1">
+            Bottom...
+        </div>
+        <div class="scroll-content">
+        </div>
+    </div>
+        <!--
+        <p>
+        Performance comparison: Native slider
+        <input type="range" min="0" max="100" style="width:200px">
+        </p>
+        -->
+
+        <!-- build:js scripts/vendor.js -->
+        <!-- bower:js -->
+        <script src="scripts/web-animations.js"></script>
+        <!-- endbower -->
+        <!-- endbuild -->
+
+    <!-- build:js scripts/touch-animation.js -->
+    <script src="scripts/utils.js"></script>
+    <script src="scripts/gesture.js"></script>
+    <script src="scripts/scroll-animation.js"></script>
+    <!-- endbuild -->
+
+    <script>
+        var     rowCount = 40;
+
+
+        var scrollViewport = document.querySelector('.scroll-viewport'),
+                scrollContent = scrollViewport.querySelector('.scroll-content'),
+                scrollHeader = scrollViewport.querySelector('.scroll-header'),
+                scrollFooter = scrollViewport.querySelector('.scroll-footer'),
+                pullToRefresh = scrollHeader.querySelector('.pull-to-refresh'),
+                indicator = scrollViewport.querySelector('.scroll-indicator');
+
+        var     rowHeight = 15,
+                viewPortHeight = utils.getHeight(scrollViewport),
+                headerHeight = utils.getHeight(scrollHeader),
+                footerHeight = utils.getHeight(scrollFooter),
+                pullToRefreshWidth = utils.getWidth(scrollHeader),
+                indicatorHeight = utils.getHeight(indicator);
+
+        var headerFooterSlowDownFactor = 5,
+            headerDuration = headerHeight / viewPortHeight * headerFooterSlowDownFactor,
+            footerDuration = footerHeight / viewPortHeight * headerFooterSlowDownFactor,
+            contentDuration = (rowHeight * rowCount - viewPortHeight) / viewPortHeight;
+
+        // document.timeline.play(totalAnimation());
+        new ScrollAnimation({
+            animation: totalAnimation(),
+            timeToPixelRatio: viewPortHeight,
+            gesture: new gesture.SlideYGesture(document.body, -1),
+            headerDuration: headerDuration,
+            footerDuration: footerDuration
+        });
+
+        function totalAnimation() {
+            return new ParGroup([new SeqGroup([headerAnimation(), contentAnimation(), footerAnimation()]), indicatorAnimation()]);
+        }
+
+        function indicatorAnimation() {
+            var start = new Animation(indicator, [
+                {offset: 0, transform: 'translateZ(0) translateY(-'+(indicatorHeight*0.9)+'px)'},
+                {offset: 1, transform: 'translateZ(0) translateY(0)'}
+            ], headerDuration);
+            var middle = new Animation(indicator, [
+                {offset: 0, transform: 'translateZ(0) translateY(0px)'},
+                {offset: 1, transform: 'translateZ(0) translateY('+(viewPortHeight-indicatorHeight)+'px)'}
+            ], contentDuration);
+            var end = new Animation(indicator, [
+                {offset: 0, transform: 'translateZ(0) translateY('+(viewPortHeight-indicatorHeight)+'px)'},
+                {offset: 1, transform: 'translateZ(0) translateY('+(viewPortHeight-indicatorHeight + indicatorHeight*0.9)+'px)'}
+            ], footerDuration);
+            return new SeqGroup([start, middle, end]);
+        }
+
+        function headerAnimation() {
+            var headerAnimation = new Animation(scrollHeader, [
+                {offset: 0, transform: 'translateZ(0) translateY('+headerHeight+'px)'},
+                {offset: 1, transform: 'translateZ(0) translateY(0px)'}
+            ], headerDuration);
+            var contentAnimation = new Animation(scrollContent, [
+                {offset: 0, transform: 'translateZ(0) translateY('+headerHeight+'px)'},
+                {offset: 1, transform: 'translateZ(0) translateY(0px)'}
+            ], headerDuration);
+            var pullToRefreshAnimation = new Animation(pullToRefresh, [
+                {offset: 0, transform: 'translateZ(0) rotate(0p)'},
+                {offset: 1, transform: 'translateZ(0) rotate(360deg)'}
+            ], headerDuration);
+            return new ParGroup([headerAnimation, contentAnimation, pullToRefreshAnimation]);
+        }
+
+        function contentAnimation() {
+            var physicalRows = Math.ceil(viewPortHeight / rowHeight) + 1,
+                animationMoveRows = physicalRows - 1,
+                i, row,
+                container = document.createElement('div'),
+                rowAnimation, rowAnimations = [], duration,
+                anim1, anim2;
+            for (i=0; i<physicalRows; i++) {
+                row = createRow();
+                rowAnimations.push(createAnimation(row, i));
+                rowAnimations.push(createEventAnim(row, i));
+            }
+            return new ParGroup(rowAnimations, {
+                duration: contentDuration
+            });
+
+            function createRow() {
+                container.innerHTML = '<div style="height: '+rowHeight+'px;"></div>';
+                var row = container.childNodes[0];
+                scrollContent.appendChild(row);
+                return row;
+            }
+
+            function createAnimation(row, i) {
+                var bottom = i*rowHeight+ rowHeight;
+                fillRow(row, i);
+                anim1 = new Animation(row, [
+                    { offset: 0, transform: 'translateZ(0) translateY('+((animationMoveRows-i)*rowHeight)+'px)' },
+                    { offset: 1, transform: 'translateZ(0) translateY(-'+bottom+'px)' }
+                ], {
+                    iterationStart : (animationMoveRows - i) / physicalRows,
+                    duration: (animationMoveRows)*rowHeight / viewPortHeight,
+                    // TODO Bug: Setting this to Infinity and adding a oniteration event listener
+                    // stops the animation here!
+                    iterations: 100
+                });
+                return anim1;
+            }
+
+            function createEventAnim(row, i) {
+                // TODO Bugs: with the events
+                // - no events while scrubbing backwards
+                // - no events during running velocity animation. This might be due to the fact that
+                //   we reparent the animation temporarily during animation.
+                // - extra delay needed
+                var res = new SeqGroup([], {
+                    iterationStart : (animationMoveRows - i) / physicalRows,
+                    duration: (animationMoveRows)*rowHeight / viewPortHeight,
+                    // TODO Bug: Setting this to Infinity and adding a oniteration event listener
+                    // stops the animation here!
+                    iterations: 100,
+                    // TODO Bug: This seems to be a bug, we should not need this delay here!
+                    delay: headerDuration
+                });
+                res.oniteration = function(e) {
+                    fillRow(row, physicalRows * e.iterationIndex + i);
+                };
+                return res;
+            }
+        }
+
+        function footerAnimation() {
+            var footerAnimation = new Animation(scrollFooter, [
+                {offset: 0, transform: 'translateZ(0) translateY(0px)'},
+                {offset: 1, transform: 'translateZ(0) translateY(-'+footerHeight+'px)'}
+            ], {
+                duration: footerDuration
+            });
+            var contentAnimation = new Animation(scrollContent, [
+                {offset: 0, transform: 'translateZ(0) translateY(0px)'},
+                {offset: 1, transform: 'translateZ(0) translateY(-'+footerHeight+'px)'}
+            ], footerDuration);
+            return new ParGroup([
+                footerAnimation,
+                contentAnimation
+            ]);
+        }
+
+        function fillRow(row, rowIndex) {
+            row.innerHTML = 'Row '+rowIndex;
+        }
+
+    </script>
+    </body>
+</html>
+
