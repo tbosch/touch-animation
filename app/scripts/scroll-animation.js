@@ -1,4 +1,56 @@
 (function () {
+  var nativeRaf = window.requestAnimationFrame ||
+    window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame;
+
+  function setCurrentTime(player, time) {
+    // TODO: How can I update the currentTime of a player
+    // without triggering a raf?
+    nativeRaf(function() {
+      player.currentTime = time;
+    });
+  }
+
+  var easePlayer;
+  function easeEffect(player, targetTime, playrate, effect) {
+    var start = player.currentTime,
+      timeDiff = targetTime - start,
+      anim = new Animation(null, {
+      sample: sample
+    }, {
+      duration: Math.abs(timeDiff),
+      easing: effect
+    });
+    anim.onend = stop;
+    // TODO: What is the correct way to delete a player?
+    if (easePlayer) {
+      easePlayer.source = anim;
+    } else {
+      easePlayer = document.timeline.play(anim);
+    }
+    easePlayer.playbackRate = playrate;
+    easePlayer.currentTime = 0;
+    easePlayer.paused = false;
+
+    var lastTimeFraction;
+
+    return stop;
+
+    function sample(timeFraction) {
+      // Need to do this lasttime check and separate raf. Otherwise
+      // this would not work...
+      if (lastTimeFraction!==timeFraction) {
+        lastTimeFraction = timeFraction;
+        setCurrentTime(player, start + timeDiff * timeFraction);
+      }
+    }
+
+    function stop() {
+      easePlayer.source = null;
+      easePlayer.paused = true;
+    }
+  }
+
+
   function TouchAnimation(options) {
     var self = this;
     this.duration = options.animation.duration;
@@ -21,27 +73,33 @@
       }
       if (action === 'move' || action === 'start') {
         var newTime = self.gestureStart.time + (pixelOffset / self.timeToPixelRatio);
-        if (self.lastGesture) {
-          // TODO: Apply some smoothing over time, e.g.
-          // take the last three points and calculate the average velocity...
-          self.gestureVelocity =
-            (newTime - self.lastGesture.offset) /
-            (self.player.timeline.currentTime - self.lastGesture.time);
+        if (action === 'start') {
+          self.gestureVelocity = 0;
+        } else if (action === 'move') {
+          if (self.lastGesture) {
+            // TODO: Apply some smoothing over time, e.g.
+            // take the last three points and calculate the average velocity...
+            self.gestureVelocity =
+              (newTime - self.lastGesture.offset) /
+                (self.player.timeline.currentTime - self.lastGesture.time);
+          }
         }
         self.lastGesture = {
           offset: newTime,
           time: self.player.timeline.currentTime
         };
 
-        self.player.currentTime = newTime;
+        setCurrentTime(self.player, newTime);
       }
       if (action === 'stop') {
         var lowerBound = self.headerDuration,
             upperBound = self.duration - self.footerDuration;
         if (self.player.currentTime <= lowerBound) {
-          self.animateTo(lowerBound);
+          // TODO: Which velocity to take?
+          self.animateTo(lowerBound, 2);
         } else if (self.player.currentTime >= upperBound) {
-          self.animateTo(upperBound);
+          // TODO: Which velocity to take?
+          self.animateTo(upperBound, 2);
         } else {
           // TODO: Is this the right calculation?
           var newTime = self.player.currentTime + self.gestureVelocity / 2;
@@ -54,66 +112,19 @@
 
     this.player = document.timeline.play(this.animation);
     this.player.paused = true;
-    this.player.currentTime = this.headerDuration;
+    setCurrentTime(this.player, this.headerDuration);
   }
 
   TouchAnimation.prototype = {
-    stopAnimateTo: function(finished) {
-      var state, newTime, playedRatio;
-      if (state = this.animateToRunning) {
-        delete this.animateToRunning;
-        // TODO: check this generically (the finished flag)
-        if (!finished) {
-          // TODO: is this correct?
-          // TODO: Does not include eased timing right now...
-          var animatedTime = this.player.currentTime;
-          playedRatio = animatedTime / this.player.source.duration;
-          newTime = state.startTime + ((state.targetTime - state.startTime) * playedRatio);
-        } else {
-          newTime = state.targetTime;
-          playedRatio = 1;
-        }
-        console.log('stopped animation: playedRatio='+playedRatio);
-        this.player.source = this.animation;
-        this.player.paused = true;
-        this.player.currentTime = newTime;
+    stopAnimateTo: function() {
+      if (this.animateToStop) {
+
+        this.animateToStop();
+        delete this.animateToStop;
       }
     },
     animateTo: function(targetTime, playbackRate) {
-      this.stopAnimateTo();
-      var self = this,
-          startTime = this.player.currentTime;
-      this.animateToRunning = {
-        startTime: startTime,
-        targetTime: targetTime
-      };
-      console.log('animateTo: start='+ startTime+ ' target='+targetTime+' playRate='+playbackRate);
-      var group = new SeqGroup([this.animation], {
-        delay:  -Math.min(targetTime,startTime),
-        duration: Math.max(targetTime,startTime)
-      });
-
-      if (targetTime>startTime) {
-        group = new SeqGroup([group], {
-          // extreme ease-out
-          easing: 'cubic-bezier(0, 0, 0.1, 1)'
-        });
-      } else {
-        group = new SeqGroup([group], {
-          // extreme ease-in
-          easing: 'cubic-bezier(0.9, 0, 1, 1)',
-          direction: 'reverse'
-        });
-      }
-
-      group.onend = function() {
-        self.stopAnimateTo(true);
-      };
-      // start animation phase.
-      this.player.source = group;
-      this.player.playbackRate = playbackRate || 0.5;
-      this.player.currentTime = 0;
-      this.player.paused = false;
+      this.animateToStop = easeEffect(this.player, targetTime, playbackRate || 0.5, 'ease-out');
     }
   };
 
