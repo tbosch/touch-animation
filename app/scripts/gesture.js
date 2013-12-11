@@ -27,18 +27,31 @@
     this.active = false;
     // TODO restrict the touchable region / make it defineable!
 
+    elem.addEventListener("touchstart", touchMove, false);
+    elem.addEventListener("touchend", touchMove, false);
     elem.addEventListener("touchmove", touchMove, false);
     elem.addEventListener("mousedown", touchMove, false);
     elem.addEventListener("mousemove", touchMove, false);
-    elem.addEventListener("mouseup", mouseUp, false);
+    elem.addEventListener("mouseup", touchMove, false);
 
     function getEventPos(event) {
       return event.pageY || event.changedTouches[0].pageY;
     }
 
+    function isPressed(event) {
+      if (event.type === 'touchend' || event.type==='mouseup') {
+        return false;
+      }
+      // If the mouse goes off screen, is unpressed there and then goes
+      // back on screen we need to detect this.
+      if (event.changedTouches) {
+        return !!event.changedTouches.length;
+      }
+      return !!event.which;
+    }
+
     function touchMove(event) {
-      // TODO: This does not work for touch events yet!
-      var pressed = event.which === 1,
+      var pressed = isPressed(event),
         eventPos = getEventPos(event);
       if (!self.active && pressed) {
         self.active = true;
@@ -54,8 +67,6 @@
     }
 
     function mouseUp(event) {
-      // TODO: Detect this more reliably!
-      // E.g. using a timeout (when the mouse is not moved any more, we stop!)
       var eventPos = getEventPos(event);
       if (self.active) {
         self._callListeners(dir * (eventPos - self.startPos), 'stop');
