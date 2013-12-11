@@ -10,13 +10,13 @@
     <body style="height: 400px">
     <div class="scroll-viewport" style="height: 200px; margin-top: 20px; border: 1px solid black; position: relative; overflow: hidden">
         <div class="scroll-indicator" style="position:absolute;right:0;top:0;z-index:1;width:4px;height:40px;background-color:red"></div>
-        <div class="scroll-header" style="background-color:grey;height:40px;position:absolute;top:-40px;width:100%">
-            <div style="text-align: center" class="pull-to-refresh">Pull to refresh</div>
-        </div>
-        <div class="scroll-footer" style="background-color:grey;height:40px;position:absolute;top:100%;width:100%;z-index:1">
-            Bottom...
-        </div>
-        <div class="scroll-content">
+        <div style="height: 100%; position:relative" class="inner-viewport">
+            <div class="scroll-header" style="background-color:grey;height:40px;position:absolute;top:-40px;width:100%">
+                <div style="text-align: center" class="pull-to-refresh">Pull to refresh</div>
+            </div>
+            <div class="scroll-footer" style="background-color:grey;height:40px;position:absolute;top:100%;width:100%;z-index:1">
+                Bottom...
+            </div>
             <div class="block0" style="border: 1px solid yellow;">Block0</div>
             <div class="block1" style="border: 1px solid blue;">Block1</div>
         </div>
@@ -46,7 +46,7 @@
 
 
         var scrollViewport = document.querySelector('.scroll-viewport'),
-                scrollContent = scrollViewport.querySelector('.scroll-content'),
+                innerViewport = document.querySelector('.inner-viewport'),
                 scrollHeader = scrollViewport.querySelector('.scroll-header'),
                 scrollFooter = scrollViewport.querySelector('.scroll-footer'),
                 pullToRefresh = scrollHeader.querySelector('.pull-to-refresh'),
@@ -99,11 +99,7 @@
         }
 
         function headerAnimation() {
-            var headerAnimation = new Animation(scrollHeader, [
-                {offset: 0, transform: 'translateZ(0) translateY('+headerHeight+'px)'},
-                {offset: 1, transform: 'translateZ(0) translateY(0px)'}
-            ], headerDuration);
-            var contentAnimation = new Animation(scrollContent, [
+            var headerAnimation = new Animation(innerViewport, [
                 {offset: 0, transform: 'translateZ(0) translateY('+headerHeight+'px)'},
                 {offset: 1, transform: 'translateZ(0) translateY(0px)'}
             ], headerDuration);
@@ -111,9 +107,18 @@
                 {offset: 0, transform: 'translateZ(0) rotate(0p)'},
                 {offset: 1, transform: 'translateZ(0) rotate(360deg)'}
             ], headerDuration);
-            return new ParGroup([headerAnimation, contentAnimation, pullToRefreshAnimation]);
+            return new ParGroup([headerAnimation, pullToRefreshAnimation]);
         }
 
+        function footerAnimation() {
+            var footerAnimation = new Animation(innerViewport, [
+                {offset: 0, transform: 'translateZ(0) translateY(0px)'},
+                {offset: 1, transform: 'translateZ(0) translateY(-'+footerHeight+'px)'}
+            ], {
+                duration: footerDuration
+            });
+            return footerAnimation;
+        }
         function contentAnimation() {
             var blockHeight = rowHeight * rowsPerPage,
                 blockDuration = 2*blockHeight / viewPortHeight,
@@ -121,8 +126,8 @@
                 // stops the animation here!
                 blockIterations = 100;
             var block0Anim = new Animation(block0, [
-                { offset: 0, transform: 'translateZ(0) translateY('+blockHeight+'px)' },
-                { offset: 1, transform: 'translateZ(0) translateY(-'+blockHeight +'px)' }
+                { offset: 0, transform: 'translateZ(0) translateY(100%)' },
+                { offset: 1, transform: 'translateZ(0) translateY(-100%)' }
             ], {
                 iterationStart: 0.5,
                 duration: blockDuration,
@@ -130,8 +135,8 @@
             });
 
             var block1Anim = new Animation(block1, [
-                { offset: 0, transform: 'translateZ(0) translateY(0px)' },
-                { offset: 1, transform: 'translateZ(0) translateY(-'+(2*blockHeight) +'px)' }
+                { offset: 0, transform: 'translateZ(0) translateY(0%)' },
+                { offset: 1, transform: 'translateZ(0) translateY(-200%)' }
             ], {
                 duration: blockDuration,
                 iterations: blockIterations
@@ -175,23 +180,6 @@
             return new ParGroup([block0Anim, block1Anim, eventsAnim], {
                 duration: contentDuration
             });
-        }
-
-        function footerAnimation() {
-            var footerAnimation = new Animation(scrollFooter, [
-                {offset: 0, transform: 'translateZ(0) translateY(0px)'},
-                {offset: 1, transform: 'translateZ(0) translateY(-'+footerHeight+'px)'}
-            ], {
-                duration: footerDuration
-            });
-            var contentAnimation = new Animation(scrollContent, [
-                {offset: 0, transform: 'translateZ(0) translateY(0px)'},
-                {offset: 1, transform: 'translateZ(0) translateY(-'+footerHeight+'px)'}
-            ], footerDuration);
-            return new ParGroup([
-                footerAnimation,
-                contentAnimation
-            ]);
         }
 
         function fillBlock(block, pageIndex) {
