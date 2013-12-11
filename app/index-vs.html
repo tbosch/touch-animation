@@ -7,8 +7,9 @@
         <link rel="stylesheet" href="styles/main.css">
         <!-- endbuild -->
     </head>
-    <body style="height: 400px">
-    <div class="scroll-viewport" style="height: 200px; margin-top: 20px; border: 1px solid black; position: relative; overflow: hidden">
+    <body style="height: 100%">
+
+    <div class="scroll-viewport" style="height: 400px; margin-top: 5%; border: 1px solid black; overflow: hidden; position: relative">
         <div class="scroll-indicator" style="position:absolute;right:0;top:0;z-index:1;width:4px;height:40px;background-color:red"></div>
         <div style="height: 100%; position:relative" class="inner-viewport">
             <div class="scroll-header" style="background-color:grey;height:40px;position:absolute;top:-40px;width:100%">
@@ -30,7 +31,8 @@
 
         <!-- build:js scripts/vendor.js -->
         <!-- bower:js -->
-        <script src="scripts/web-animations.js"></script>
+    <script src="scripts/web-animations.js"></script>
+    <script src="scripts/web-animations-fixes.js"></script>
         <!-- endbower -->
         <!-- endbuild -->
 
@@ -41,9 +43,8 @@
     <!-- endbuild -->
 
     <script>
-        var     rowCount = 40,
-                rowsPerPage = 6;
-
+        var     rowCount = 20,
+                rowsPerPage = 13;
 
         var scrollViewport = document.querySelector('.scroll-viewport'),
                 innerViewport = document.querySelector('.inner-viewport'),
@@ -65,14 +66,15 @@
                 indicatorHeight = utils.getHeight(indicator);
 
         var headerFooterSlowDownFactor = 5,
-            headerDuration = headerHeight / viewPortHeight * headerFooterSlowDownFactor,
-            footerDuration = footerHeight / viewPortHeight * headerFooterSlowDownFactor,
-            contentDuration = (rowHeight * rowCount - viewPortHeight) / viewPortHeight;
+            // estimate header/footer as high as a row
+            headerDuration = 1 * headerFooterSlowDownFactor,
+            footerDuration = 1 * headerFooterSlowDownFactor,
+            contentDuration = rowCount - (viewPortHeight / rowHeight);
 
         // document.timeline.play(totalAnimation());
         new ScrollAnimation({
             animation: totalAnimation(),
-            timeToPixelRatio: viewPortHeight,
+            timeToPixelRatio: rowHeight,
             gesture: new gesture.SlideYGesture(document.body, -1),
             headerDuration: headerDuration,
             footerDuration: footerDuration
@@ -120,8 +122,7 @@
             return footerAnimation;
         }
         function contentAnimation() {
-            var blockHeight = rowHeight * rowsPerPage,
-                blockDuration = 2*blockHeight / viewPortHeight,
+            var blockDuration = 2*rowsPerPage,
                 // TODO Bug: Setting this to Infinity and adding a oniteration event listener
                 // stops the animation here!
                 blockIterations = 100;
@@ -158,12 +159,12 @@
 
             var block0Fill = 0,
                 block1Fill = 1;
-            function sampleEvents(time, iteration) {
+            function sampleEvents(timeFraction, iteration) {
                 var block0FillNew,
                     block1FillNew;
-                if (time >= 0.5) {
+                if (timeFraction >= 0.5) {
                     block0FillNew = (iteration+1)*2;
-                } else if (time < 0.5) {
+                } else if (timeFraction < 0.5) {
                     block0FillNew = iteration*2;
                 }
                 block1FillNew = iteration * 2 + 1;
