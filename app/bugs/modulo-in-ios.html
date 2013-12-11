@@ -1,0 +1,33 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+</head>
+<body >
+
+<div class="block0" style="border: 1px solid yellow;">Block0</div>
+
+<script src="../scripts/web-animations.js"></script>
+
+<script>
+    var block0 = document.querySelector('.block0');
+    var player = document.timeline.play(contentAnimation());
+    player.playbackRate = 1;
+
+    function contentAnimation() {
+        return new Animation(null, {
+            sample: sample
+        }, {
+            duration: 0.4
+        });
+
+        function sample(timeFraction) {
+            // The last logged value should be 1. However, it is a very small number!
+            console.log(timeFraction);
+        }
+    }
+
+
+</script>
+</body>
+</html>
+
