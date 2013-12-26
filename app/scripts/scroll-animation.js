@@ -1,7 +1,6 @@
 (function () {
   function TouchAnimation(options) {
     var self = this;
-    this.duration = options.animation.duration;
     if (options.timeToPixelRatio) {
       this.timeToPixelRatio = options.timeToPixelRatio;
     } else {
@@ -9,8 +8,11 @@
     }
     this.headerDuration = options.headerDuration;
     this.footerDuration = options.footerDuration;
-    this.animation = options.animation;
     this.gesture = options.gesture;
+
+    this.duration = options.animation.duration;
+    this.animation = options.animation;
+
     this.gesture.addPositionListener(function(pixelOffset, action) {
       if (action === 'start') {
         self.gestureStart = {
@@ -25,7 +27,7 @@
         if (action === 'start') {
           self.gestureVelocity = 0;
         } else if (action === 'move') {
-          if (self.lastGesture) {
+          if (self.lastGesture && self.player.timeline.currentTime !== self.lastGesture.time) {
             // TODO: Apply some smoothing over time, e.g.
             // take the last three points and calculate the average velocity...
             self.gestureVelocity =
@@ -64,6 +66,18 @@
     this.player = document.timeline.play(this.animation);
     this.player.paused = true;
     utils.setPlayerCurrentTimeInRaf(this.player, this.headerDuration);
+
+    this.updateAnimation = function(animation) {
+      var self = this;
+      // Needs to be in a raf as otherwise the events
+      // of the animation might fire immediately, which
+      // is something the caller might not expect.
+      utils.raf(function() {
+        self.duration = animation.duration;
+        self.animation = animation;
+        self.player.source = animation;
+      });
+    };
   }
 
   window.ScrollAnimation = TouchAnimation;

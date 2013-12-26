@@ -5,7 +5,8 @@
     getHeight: getHeight,
     getWidth: getWidth,
     setPlayerCurrentTimeInRaf: setPlayerCurrentTimeInRafWithStop,
-    animatePlayerTo: animatePlayerTo
+    animatePlayerTo: animatePlayerTo,
+    raf: raf
   };
 
 

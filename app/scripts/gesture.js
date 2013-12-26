@@ -27,12 +27,21 @@
     this.active = false;
     // TODO restrict the touchable region / make it defineable!
 
+    /* prevent bounce effect in iOS, ... */
+    elem.addEventListener("touchmove", function(e) {
+      e.preventDefault();
+    }, false);
+    elem.addEventListener("scroll", function(e) {
+      e.preventDefault();
+    }, false);
+
     elem.addEventListener("touchstart", touchMove, false);
     elem.addEventListener("touchend", touchMove, false);
     elem.addEventListener("touchmove", touchMove, false);
     elem.addEventListener("mousedown", touchMove, false);
     elem.addEventListener("mousemove", touchMove, false);
     elem.addEventListener("mouseup", touchMove, false);
+
 
     function getEventPos(event) {
       return event.pageY || event.changedTouches[0].pageY;
@@ -62,8 +71,6 @@
       } else {
         mouseUp(event);
       }
-      // Prevent selection while mouse move!
-      event.preventDefault();
     }
 
     function mouseUp(event) {
