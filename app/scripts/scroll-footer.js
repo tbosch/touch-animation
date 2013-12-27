@@ -11,7 +11,7 @@ angular.module('scroll').directive('scrollFooter', function () {
       ngScrollerCtrl.animationDecorators.push(animationDecorator);
 
       function animationDecorator(builder) {
-        var footerAnimation = new Animation(ngScrollerCtrl.innerViewport[0], [
+        var footerAnimation = new Animation(element.parent()[0], [
           {offset: 0, transform: 'translateZ(0) translateY(0px)'},
           {offset: 1, transform: 'translateZ(0) translateY(-' + footerHeight + 'px)'}
         ], {

@@ -11,7 +11,7 @@ angular.module('scroll').directive('scrollIndicator', function () {
       ngScrollerCtrl.animationDecorators.push(animationDecorator);
 
       function animationDecorator(builder) {
-        var newCount = 40; // TODO get this from ngScrollCtrl!
+        var newCount = builder.rowCount;
         var indicatorHeight = Math.max(10, viewPortHeight / (ngScrollerCtrl.rowHeight * newCount) * viewPortHeight);
         indicator[0].style.height = indicatorHeight + 'px';
 

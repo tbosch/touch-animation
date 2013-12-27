@@ -1,111 +1,103 @@
-angular.module('scroll').directive('ngScroller', ['$compile', '$parse', 'touchAnimation', 'animationBuilder', function ($compile, $parse, TouchAnimation, animationBuilder) {
+angular.module('scroll').directive('ngScroller', ['touchAnimation', 'animationBuilder', function (TouchAnimation, animationBuilder) {
   return {
     compile: function (element) {
       element.addClass('scroll-viewport');
       var scrollContent = angular.element(element[0].querySelector('.scroll-row'));
-      var rowLink = $compile(scrollContent);
+
+      var block0 = angular.element('<div class="scroll-block0"></div>'),
+          block0row = scrollContent.clone();
+      block0row.attr('ng-repeat', 'row in block0rows');
+      block0.append(block0row);
+      element.append(block0);
+
+      var block1 = angular.element('<div class="scroll-block1"></div>'),
+          block1row = scrollContent.clone();
+      block1row.attr('ng-repeat', 'row in block1rows');
+      block1.append(block1row);
+      element.append(block1);
+
       scrollContent.remove();
 
-      return function (scope, element, attrs, ctrl) {
-        link(scope, element, attrs, rowLink, ctrl);
-      };
+      return function(scope, element, attrs, ctrl) {
+        link(scope, element, attrs, ctrl, scrollContent);
+      }
     },
     controller: NgScrollerController,
-    require: 'ngScroller'
+    require: 'ngScroller',
+    scope: true
   };
 
-  function link(scope, viewPort, attrs, rowLink, ctrl) {
+  function link(scope, viewPort, attrs, ctrl, rowTemplate) {
 
-    var rowModelExpression = $parse(attrs.ngScroller),
-      rowsParentScope = scope.$new(),
-      scrollAnimation;
+    viewPort.append(rowTemplate);
+    var rowHeight = utils.getHeight(rowTemplate[0]);
+    ctrl.rowHeight = rowHeight;
+    rowTemplate.remove();
+
+    var scrollAnimation;
 
     var innerViewport = angular.element('<div class="inner-viewport"></div>'),
-      block0 = angular.element('<div class="scroll-block0"></div>'),
-      block1 = angular.element('<div class="scroll-block1"></div>');
-
-    ctrl.innerViewport = innerViewport;
+      block0 = angular.element(viewPort[0].querySelector('.scroll-block0')),
+      block1 = angular.element(viewPort[0].querySelector('.scroll-block1'));
 
     innerViewport.append(viewPort.children());
     viewPort.append(innerViewport);
     innerViewport.append(block0);
     innerViewport.append(block1);
 
-    var block0Rows = [], block1Rows = [];
+    var block0page = 0,
+        block1page = 1;
 
-    block0Rows.push(createRow(block0));
-    var rowHeight = utils.getHeight(block0Rows[0].elm[0]);
-    ctrl.rowHeight = rowHeight;
+    var viewPortHeight,
+        rowsPerPage;
 
-    var viewPortHeight = utils.getHeight(viewPort[0]);
-
-    var rowsPerPage = Math.ceil(viewPortHeight / rowHeight) + 1;
-
-    fillBlockRows(block0Rows, rowsPerPage, block0);
-    fillBlockRows(block1Rows, rowsPerPage, block1);
-
-    var lastRowCount;
-    scope.$watch(checkRowModel);
+    scope.$watchCollection(attrs.ngScroller, rowsChanged);
 
     return;
 
-    function checkRowModel() {
-      var rows = rowModelExpression(scope),
-        newCount = rows.length;
+    function rowsChanged(rows) {
+      viewPortHeight = utils.getHeight(viewPort[0]);
+      rowsPerPage = Math.ceil(viewPortHeight / rowHeight) + 1;
 
-      if (newCount != lastRowCount) {
+      updateBlockRows();
 
-        // TODO: how to recreate the animation??
-        // TODO: need to keep the current position!
-        // TODO: keep the gesture
-        // TODO: How to destroy the player??
-        var animation = createAnimation(newCount, function (pageIndices) {
-          rowsParentScope.$apply(function () {
-            var i;
-            for (i = 0; i < pageIndices.length; i++) {
-              updatePage(pageIndices[i], rows);
+      // TODO: recreate the animation when the gesture starts,
+      // not when the rows change!
+      // TODO: need to keep the current position!
+      // TODO: How to destroy the player??
+      var animation = createAnimation(rows.length, function (pageIndices) {
+        scope.$apply(function () {
+          var i, pageIndex;
+          for (i = 0; i < pageIndices.length; i++) {
+            pageIndex = pageIndices[i];
+            if (pageIndex % 2) {
+              block1page = pageIndex;
+            } else {
+              block0page = pageIndex;
             }
-          });
+          }
+          updateBlockRows();
         });
-
-        if (!scrollAnimation) {
-          scrollAnimation = createScrollAnimation(animation);
-          updatePage(0, rows);
-          updatePage(1, rows);
-          console.log('created animation');
-        } else {
-          scrollAnimation.updateAnimation(animation);
-          // TOOD: This needs to be a different page index! updatePage(0, rows);
-          // TODO: This needs to be a different page index! updatePage(1, rows);
-          console.log('updated animation');
-        }
-      }
-      return lastRowCount = newCount;
-    }
-
-    function createRow(parent) {
-      var childScope = rowsParentScope.$new();
-      var row = rowLink(childScope, function (clone) {
-        parent.append(clone);
       });
-      return {
-        scope: childScope,
-        elm: row
-      };
-    }
 
-    function fillBlockRows(blockRows, count, parent) {
-      var i;
-      for (i = blockRows.length; i < count; i++) {
-        blockRows.push(createRow(parent));
+      if (!scrollAnimation) {
+        scrollAnimation = createScrollAnimation(animation);
+      } else {
+        scrollAnimation.updateAnimation(animation);
       }
-    }
 
-    function updatePage(pageIndex, rowModel) {
-      var targetRows = pageIndex % 2 ? block1Rows : block0Rows,
-        i;
-      for (i = 0; i < rowsPerPage; i++) {
-        targetRows[i].scope.row = rowModel[pageIndex * rowsPerPage + i];
+      function updateBlockRows() {
+        scope.block0rows = rows.slice(block0page*rowsPerPage, block0page*rowsPerPage + rowsPerPage);
+        fillMissingRowsInPage(scope.block0rows);
+        scope.block1rows = rows.slice(block1page*rowsPerPage, block1page*rowsPerPage + rowsPerPage);
+        fillMissingRowsInPage(scope.block1rows);
+      }
+
+      function fillMissingRowsInPage(rows) {
+        var i;
+        for (i=rows.length; i<rowsPerPage; i++) {
+          rows.push({});
+        }
       }
     }
 
@@ -128,6 +120,7 @@ angular.module('scroll').directive('ngScroller', ['$compile', '$parse', 'touchAn
 
     function createAnimation(rowCount, renderPages) {
       var builder = animationBuilder();
+      builder.rowCount = rowCount;
       ctrl.decorateAnimation(builder);
       contentAnimation(builder);
 

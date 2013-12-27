@@ -11,7 +11,7 @@ angular.module('scroll').directive('scrollHeader', function () {
       ngScrollerCtrl.animationDecorators.push(animationDecorator);
 
       function animationDecorator(builder) {
-        var headerAnimation = new Animation(ngScrollerCtrl.innerViewport[0], [
+        var headerAnimation = new Animation(element.parent()[0], [
           {offset: 0, transform: 'translateZ(0) translateY(' + headerHeight + 'px)'},
           {offset: 1, transform: 'translateZ(0) translateY(0px)'}
         ], headerDuration);
