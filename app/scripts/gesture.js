@@ -1,88 +1,127 @@
-(function () {
-  window.gesture = {
-    SlideYGesture : SlideYGesture
-  };
+angular.module('scroll').factory('gesture', ['$rootElement', function($rootElement) {
+  var GESTURE_START_DISTANCE = 5,
+      pressStart,
+      currentGesture;
 
-  function Gesture() {
-    this.listeners = [];
+  preventBounceEffect();
+  addRootListeners();
+  return addListener;
+
+  function addListener(element, gestureType, callback) {
+    var listeners = gestureListeners(element);
+    listeners[gestureType] = callback;
   }
 
-  Gesture.prototype = {
-    addPositionListener: function (listener) {
-      this.listeners.push(listener);
-    },
-    _callListeners: function (position, action) {
-      var i, listener;
-      for (i = 0; i < this.listeners.length; i++) {
-        listener = this.listeners[i];
-        listener(position, action);
+  function gestureListeners(element) {
+    var res = element.data('$gestureListeners');
+    if (!res) {
+      res = {};
+      element.data('$gestureListeners', res);
+    }
+    return res;
+  }
+
+  function addRootListeners() {
+    $rootElement.on('touchstart touchmove touchend mousedown mousemove mouseup', touchMouseEvent);
+  }
+
+  function touchMouseEvent(e) {
+    var pressed = isPressed(e),
+        pos = getPos(e),
+        diff, absDiff, gestureType;
+
+    if (pressStart) {
+      diff = {
+         x: pos.x - pressStart.x,
+         y: pos.y - pressStart.y
+      };
+      absDiff = {
+        x: Math.abs(diff.x),
+        y: Math.abs(diff.y)
       }
     }
-  };
 
-  function SlideYGesture(elem, dir) {
-    var self = this;
-    dir = dir || 1;
-
-    this.active = false;
-    // TODO restrict the touchable region / make it defineable!
-
-    /* prevent bounce effect in iOS, ... */
-    elem.addEventListener("touchmove", function(e) {
-      e.preventDefault();
-    }, false);
-    elem.addEventListener("scroll", function(e) {
-      e.preventDefault();
-    }, false);
-
-    elem.addEventListener("touchstart", touchMove, false);
-    elem.addEventListener("touchend", touchMove, false);
-    elem.addEventListener("touchmove", touchMove, false);
-    elem.addEventListener("mousedown", touchMove, false);
-    elem.addEventListener("mousemove", touchMove, false);
-    elem.addEventListener("mouseup", touchMove, false);
-
-
-    function getEventPos(event) {
-      return event.pageY || event.changedTouches[0].pageY;
-    }
-
-    function isPressed(event) {
-      if (event.type === 'touchend' || event.type==='mouseup') {
-        return false;
+    if (!pressed) {
+      pressStart = null;
+      if (currentGesture) {
+        endGesture(currentGesture.listener, diff[currentGesture.type]);
+        currentGesture = null;
       }
-      // If the mouse goes off screen, is unpressed there and then goes
-      // back on screen we need to detect this.
-      if (event.changedTouches) {
-        return !!event.changedTouches.length;
-      }
-      return !!event.which;
-    }
-
-    function touchMove(event) {
-      var pressed = isPressed(event),
-        eventPos = getEventPos(event);
-      if (!self.active && pressed) {
-        self.active = true;
-        self.startPos = eventPos;
-        self._callListeners(0, 'start');
-      } else if (pressed) {
-        self._callListeners(dir * (eventPos - self.startPos), 'move');
+    } else if (currentGesture) {
+      updateGesture(currentGesture.listener, diff[currentGesture.type]);
+    } else {
+      if (!pressStart) {
+        pressStart = pos;
       } else {
-        mouseUp(event);
+        if (Math.max(absDiff.x, absDiff.y) > GESTURE_START_DISTANCE) {
+          if (absDiff.x > absDiff.y) {
+            gestureType = 'x';
+          } else {
+            gestureType = 'y';
+          }
+          currentGesture = {
+            type: gestureType,
+            listener: startGesture(gestureType, angular.element(e.target))
+          };
+        }
       }
     }
-
-    function mouseUp(event) {
-      var eventPos = getEventPos(event);
-      if (self.active) {
-        self._callListeners(dir * (eventPos - self.startPos), 'stop');
-      }
-      self.active = false;
-    }
-
   }
 
-  SlideYGesture.prototype = new Gesture();
+  function startGesture(type, element) {
+    var gestureListener;
+    var gestureListeners = element.inheritedData('$gestureListeners') || {};
+    gestureListener = gestureListeners[type];
+    if (gestureListener) {
+      gestureListener('start', 0);
+    }
+    return gestureListener;
+  }
 
-})();
+  function endGesture(listener, pixelOffset) {
+    if (listener) {
+      listener('end', pixelOffset);
+    }
+  }
+
+  function updateGesture(listener, pixelOffset) {
+    if (listener) {
+      listener('move', pixelOffset);
+    }
+  }
+
+  function getPos(event) {
+    if (event.changedTouches) {
+      return {
+        x: event.changedTouches[0].pageX,
+        y: event.changedTouches[0].pageY
+      };
+    } else {
+      return {
+        x: event.pageX,
+        y: event.pageY
+      };
+    }
+  }
+
+  function isPressed(event) {
+    if (event.type === 'touchend' || event.type==='mouseup') {
+      return false;
+    }
+    // If the mouse goes off screen, is unpressed there and then goes
+    // back on screen we don't get a touchend/mouseup event.
+    if (event.changedTouches) {
+      return !!event.changedTouches.length;
+    }
+    return !!event.which;
+  }
+
+  function preventBounceEffect() {
+    $rootElement.on('touchmove', function(e) {
+      e.preventDefault();
+    });
+    $rootElement.on("scroll", function(e) {
+      e.preventDefault();
+    });
+  }
+}]);

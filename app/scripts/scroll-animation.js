@@ -1,4 +1,5 @@
-(function () {
+angular.module('scroll').factory('touchAnimation', ['gesture', function(gesture) {
+
   function TouchAnimation(options) {
     var self = this;
     if (options.timeToPixelRatio) {
@@ -13,7 +14,7 @@
     this.duration = options.animation.duration;
     this.animation = options.animation;
 
-    this.gesture.addPositionListener(function(pixelOffset, action) {
+    gesture(options.gesture.element, options.gesture.type, function(action, pixelOffset) {
       if (action === 'start') {
         self.gestureStart = {
           time: self.player.currentTime
@@ -42,7 +43,7 @@
 
         utils.setPlayerCurrentTimeInRaf(self.player, newTime);
       }
-      if (action === 'stop') {
+      if (action === 'end') {
         var lowerBound = self.headerDuration,
             upperBound = self.duration - self.footerDuration;
         if (self.player.currentTime <= lowerBound) {
@@ -80,5 +81,5 @@
     };
   }
 
-  window.ScrollAnimation = TouchAnimation;
-})();
+  return TouchAnimation;
+}]);

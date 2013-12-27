@@ -20,6 +20,8 @@
             }
             .scroll-indicator {
                 position:absolute;right:0;top:0;z-index:1;
+                width:4px;
+                background-color:red
             }
             .inner-viewport {
                 height: 100%; position:relative
@@ -30,6 +32,7 @@
             .scroll-footer {
                 position:absolute;top:100%;width:100%;z-index:1
             }
+
 
             /* custom rules */
             .scroll-block0 {
@@ -59,17 +62,14 @@
 
     <button ng-click="scroll.addRows(20)">Add 20</button>
 
-    <input type="text" id="chkTemplate">
-
-    <div ng-scroller="scroll.rows" style="height: 400px; margin-top: 5%; border: 1px solid black;">
-        <div class="scroll-indicator" style="width:4px;height:40px;background-color:red"></div>
+    <div ng-scroller="scroll.rows" style="height: 400px; border: 1px solid black;">
         <div class="scroll-header" style="background-color:grey;height:40px;">
-            <div style="text-align: center" class="pull-to-refresh">Pull to refresh</div>
+            <div style="text-align: center" ng-pull-to-refresh>Pull to refresh</div>
         </div>
         <div class="scroll-footer" style="background-color:grey;height:40px;">
             Bottom...
         </div>
-        <div class="scroll-row" style="position:relative;">
+        <div class="scroll-row">
             <label>
                 <input type="checkbox" ng-model="row.clicked">
                 Row <span ng-bind="row.index" ></span>
@@ -87,12 +87,13 @@
     <script src="scripts/web-animations.js"></script>
     <script src="scripts/web-animations-fixes.js"></script>
 
+    <script src="scripts/module.js"></script>
     <script src="scripts/utils.js"></script>
     <script src="scripts/gesture.js"></script>
     <script src="scripts/scroll-animation.js"></script>
 
     <script>
-        var mod = angular.module('scroll', []);
+        var mod = angular.module('scroll');
 
         mod.controller('ScrollController', function() {
             var i;
@@ -106,10 +107,30 @@
 
                 }
             };
-            this.addRows(80);
+            this.addRows(40);
         });
 
-        mod.directive('ngScroller', ['$compile', '$parse', function($compile, $parse) {
+        mod.directive('ngPullToRefresh', function() {
+            return {
+                require: '^ngScroller',
+                link: function(scope, element, attrs, ngScrollerCtrl) {
+                    ngScrollerCtrl.animationDecorators.push(animationDecorator);
+
+                    function animationDecorator(animation) {
+                        // TODO: This is slow on Android 2.3!
+                        // --> deactivate it there!
+                        var pullToRefreshAnimation = new Animation(element[0], [
+                            {offset: 0, transform: 'translateZ(0) rotate(0p)'},
+                            {offset: 1, transform: 'translateZ(0) rotate(360deg)'}
+                        ], animation.header.duration);
+
+                        animation.header = new ParGroup([animation.header, pullToRefreshAnimation]);
+                    }
+                }
+            };
+        });
+
+        mod.directive('ngScroller', ['$compile', '$parse', 'touchAnimation', function($compile, $parse, ScrollAnimation) {
             return {
                 compile: function(element) {
                     element.addClass('scroll-viewport');
@@ -117,13 +138,15 @@
                     var rowLink = $compile(scrollContent);
                     scrollContent.remove();
 
-                    return function(scope, element, attrs) {
-                        link(scope, element, attrs, rowLink);
+                    return function(scope, element, attrs, ctrl) {
+                        link(scope, element, attrs, rowLink, ctrl);
                     };
-                }
+                },
+                controller: NgScrollerController,
+                require: 'ngScroller'
             };
 
-            function link(scope, viewPort, attrs, rowLink) {
+            function link(scope, viewPort, attrs, rowLink, ctrl) {
 
                 var rowModelExpression = $parse(attrs.ngScroller),
                     rowsParentScope = scope.$new(),
@@ -134,14 +157,7 @@
                     block1 = angular.element('<div class="scroll-block1"></div>'),
                     scrollHeader = angular.element(viewPort[0].querySelector('.scroll-header')),
                     scrollFooter = angular.element(viewPort[0].querySelector('.scroll-footer')),
-                    // TODO: Maybe generate this??
-                    indicator = angular.element(viewPort[0].querySelector('.scroll-indicator'));
-
-                // TODO: This is an extra element. How to allow to extend the created Animation
-                // to also include this??
-                // -> via a directive controller that exposes the animation?!
-
-                var pullToRefresh = angular.element(scrollHeader[0].querySelector('.pull-to-refresh'));
+                    indicator = angular.element('<div class="scroll-indicator"></div>');
 
                 viewPort.append(innerViewport);
                 innerViewport.append(scrollHeader);
@@ -153,15 +169,14 @@
 
                 block0Rows.push(createRow(block0));
                 var rowHeight = utils.getHeight(block0Rows[0].elm[0]);
-                console.log('rowHeight', rowHeight);
 
                 var     viewPortHeight = utils.getHeight(viewPort[0]),
                         headerHeight = utils.getHeight(scrollHeader[0]),
-                        footerHeight = utils.getHeight(scrollFooter[0]),
-                        pullToRefreshWidth = utils.getWidth(scrollHeader[0]),
-                        indicatorHeight = utils.getHeight(indicator[0]);
+                        footerHeight = utils.getHeight(scrollFooter[0]);
 
                 var rowsPerPage = Math.ceil(viewPortHeight / rowHeight) + 1;
+
+                viewPort.append(indicator);
 
                 fillBlockRows(block0Rows, rowsPerPage, block0);
                 fillBlockRows(block1Rows, rowsPerPage, block1);
@@ -176,6 +191,9 @@
                             newCount = rows.length;
 
                     if (newCount != lastRowCount) {
+                        var indicatorHeight = Math.max(10, viewPortHeight / (rowHeight * newCount) * viewPortHeight);
+                        indicator[0].style.height = indicatorHeight+'px';
+
                         // TODO: how to recreate the animation??
                         // TODO: need to keep the current position!
                         // TODO: keep the gesture
@@ -239,8 +257,8 @@
                     // document.timeline.play(totalAnimation());
                     return new ScrollAnimation({
                         animation: animation,
-                        timeToPixelRatio: rowHeight,
-                        gesture: new gesture.SlideYGesture(document.body, -1),
+                        timeToPixelRatio: rowHeight * -1,
+                        gesture: {type: 'y', element: viewPort},
                         headerDuration: headerDuration,
                         footerDuration: footerDuration
                     });
@@ -253,11 +271,19 @@
                         footerDuration = 1 * headerFooterSlowDownFactor,
                         contentDuration = rowCount - (viewPortHeight / rowHeight);
 
-                    return new ParGroup([new SeqGroup([headerAnimation(), contentAnimation(), footerAnimation()]), indicatorAnimation()]);
+                    var animationParts = {
+                        header: headerAnimation(),
+                        footer: footerAnimation(),
+                        content: contentAnimation()
+                    };
+                    ctrl.decorateAnimation(animationParts);
+
+                    return new ParGroup([new SeqGroup([animationParts.header, animationParts.content, animationParts.footer]), indicatorAnimation()]);
 
                     function indicatorAnimation() {
+                        var indicatorHeight = utils.getHeight(indicator[0]);
                         var start = new Animation(indicator[0], [
-                            {offset: 0, transform: 'translateZ(0) translateY(-'+(indicatorHeight*0.9)+'px)'},
+                            {offset: 0, transform: 'translateZ(0) translateY(-'+(indicatorHeight*0.5)+'px)'},
                             {offset: 1, transform: 'translateZ(0) translateY(0)'}
                         ], headerDuration);
                         var middle = new Animation(indicator[0], [
@@ -266,7 +292,7 @@
                         ], contentDuration);
                         var end = new Animation(indicator[0], [
                             {offset: 0, transform: 'translateZ(0) translateY('+(viewPortHeight-indicatorHeight)+'px)'},
-                            {offset: 1, transform: 'translateZ(0) translateY('+(viewPortHeight-indicatorHeight + indicatorHeight*0.9)+'px)'}
+                            {offset: 1, transform: 'translateZ(0) translateY('+(viewPortHeight-indicatorHeight + indicatorHeight*0.5)+'px)'}
                         ], footerDuration);
                         return new SeqGroup([start, middle, end]);
                     }
@@ -276,12 +302,7 @@
                             {offset: 0, transform: 'translateZ(0) translateY('+headerHeight+'px)'},
                             {offset: 1, transform: 'translateZ(0) translateY(0px)'}
                         ], headerDuration);
-                        // TODO: This is slow on Android 2.3!
-                        var pullToRefreshAnimation = new Animation(pullToRefresh[0], [
-                            {offset: 0, transform: 'translateZ(0) rotate(0p)'},
-                            {offset: 1, transform: 'translateZ(0) rotate(360deg)'}
-                        ], headerDuration);
-                        return new ParGroup([headerAnimation, pullToRefreshAnimation]);
+                        return headerAnimation;
                     }
 
                     function footerAnimation() {
@@ -359,6 +380,16 @@
                         });
                     }
                 }
+            }
+
+            function NgScrollerController() {
+                this.animationDecorators = [];
+                var self = this;
+                this.decorateAnimation = function(animation) {
+                    angular.forEach(self.animationDecorators, function(decorator) {
+                        decorator(animation);
+                    });
+                };
             }
         }]);
 
