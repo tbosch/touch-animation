@@ -1,0 +1,21 @@
+.scroll-viewport {
+    overflow: hidden; position: relative;
+    /* prevent bounce effect in IE */
+    -ms-scroll-chaining: none; -ms-touch-action: none;
+    /* prevent text select */
+    -webkit-user-select: none;
+}
+.inner-viewport {
+    height: 100%; position:relative
+}
+.scroll-indicator {
+    position:absolute;right:0;top:0;z-index:1;
+    width:4px;
+    background-color:red
+}
+.scroll-header {
+    position:absolute;bottom:100%;width:100%
+}
+.scroll-footer {
+    position:absolute;top:100%;width:100%;z-index:1
+}

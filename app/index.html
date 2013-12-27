@@ -4,36 +4,12 @@
         <meta charset="utf-8">
         <title>touchanimation</title>
         <meta name="viewport" content="width=device-width">
-        <!-- build:css(.tmp) styles/main.css -->
+
         <link rel="stylesheet" href="styles/main.css">
-        <!-- endbuild -->
+        <link rel="stylesheet" href="styles/scroller.css">
 
 
         <style>
-            /* general rules */
-            .scroll-viewport {
-                overflow: hidden; position: relative;
-                /* prevent bounce effect in IE */
-                -ms-scroll-chaining: none; -ms-touch-action: none;
-                /* prevent text select */
-                -webkit-user-select: none;
-            }
-            .scroll-indicator {
-                position:absolute;right:0;top:0;z-index:1;
-                width:4px;
-                background-color:red
-            }
-            .inner-viewport {
-                height: 100%; position:relative
-            }
-            .scroll-header {
-                position:absolute;bottom:100%;width:100%
-            }
-            .scroll-footer {
-                position:absolute;top:100%;width:100%;z-index:1
-            }
-
-
             /* custom rules */
             .scroll-block0 {
                 border: 1px solid yellow
@@ -62,11 +38,11 @@
 
     <button ng-click="scroll.addRows(20)">Add 20</button>
 
-    <div ng-scroller="scroll.rows" style="height: 400px; border: 1px solid black;">
-        <div class="scroll-header" style="background-color:grey;height:40px;">
-            <div style="text-align: center" ng-pull-to-refresh>Pull to refresh</div>
+    <div ng-scroller="scroll.rows" scroll-indicator style="height: 400px; border: 1px solid black;">
+        <div scroll-header style="background-color:grey;height:40px;">
+            <div style="text-align: center" scroll-pull-to-refresh>Pull to refresh</div>
         </div>
-        <div class="scroll-footer" style="background-color:grey;height:40px;">
+        <div scroll-footer style="background-color:grey;height:40px;">
             Bottom...
         </div>
         <div class="scroll-row">
@@ -90,7 +66,13 @@
     <script src="scripts/module.js"></script>
     <script src="scripts/utils.js"></script>
     <script src="scripts/gesture.js"></script>
+    <script src="scripts/animation-builder.js"></script>
     <script src="scripts/scroll-animation.js"></script>
+    <script src="scripts/scroller.js"></script>
+    <script src="scripts/scroll-header.js"></script>
+    <script src="scripts/scroll-footer.js"></script>
+    <script src="scripts/scroll-indicator.js"></script>
+    <script src="scripts/scroll-pull-to-refresh.js"></script>
 
     <script>
         var mod = angular.module('scroll');
@@ -110,289 +92,6 @@
             this.addRows(40);
         });
 
-        mod.directive('ngPullToRefresh', function() {
-            return {
-                require: '^ngScroller',
-                link: function(scope, element, attrs, ngScrollerCtrl) {
-                    ngScrollerCtrl.animationDecorators.push(animationDecorator);
-
-                    function animationDecorator(animation) {
-                        // TODO: This is slow on Android 2.3!
-                        // --> deactivate it there!
-                        var pullToRefreshAnimation = new Animation(element[0], [
-                            {offset: 0, transform: 'translateZ(0) rotate(0p)'},
-                            {offset: 1, transform: 'translateZ(0) rotate(360deg)'}
-                        ], animation.header.duration);
-
-                        animation.header = new ParGroup([animation.header, pullToRefreshAnimation]);
-                    }
-                }
-            };
-        });
-
-        mod.directive('ngScroller', ['$compile', '$parse', 'touchAnimation', function($compile, $parse, TouchAnimation) {
-            return {
-                compile: function(element) {
-                    element.addClass('scroll-viewport');
-                    var scrollContent = angular.element(element[0].querySelector('.scroll-row'));
-                    var rowLink = $compile(scrollContent);
-                    scrollContent.remove();
-
-                    return function(scope, element, attrs, ctrl) {
-                        link(scope, element, attrs, rowLink, ctrl);
-                    };
-                },
-                controller: NgScrollerController,
-                require: 'ngScroller'
-            };
-
-            function link(scope, viewPort, attrs, rowLink, ctrl) {
-
-                var rowModelExpression = $parse(attrs.ngScroller),
-                    rowsParentScope = scope.$new(),
-                    scrollAnimation;
-
-                var innerViewport = angular.element('<div class="inner-viewport"></div>'),
-                    block0 = angular.element('<div class="scroll-block0"></div>'),
-                    block1 = angular.element('<div class="scroll-block1"></div>'),
-                    scrollHeader = angular.element(viewPort[0].querySelector('.scroll-header')),
-                    scrollFooter = angular.element(viewPort[0].querySelector('.scroll-footer')),
-                    indicator = angular.element('<div class="scroll-indicator"></div>');
-
-                viewPort.append(innerViewport);
-                innerViewport.append(scrollHeader);
-                innerViewport.append(scrollFooter);
-                innerViewport.append(block0);
-                innerViewport.append(block1);
-
-                var block0Rows = [], block1Rows = [];
-
-                block0Rows.push(createRow(block0));
-                var rowHeight = utils.getHeight(block0Rows[0].elm[0]);
-
-                var     viewPortHeight = utils.getHeight(viewPort[0]),
-                        headerHeight = utils.getHeight(scrollHeader[0]),
-                        footerHeight = utils.getHeight(scrollFooter[0]);
-
-                var rowsPerPage = Math.ceil(viewPortHeight / rowHeight) + 1;
-
-                viewPort.append(indicator);
-
-                fillBlockRows(block0Rows, rowsPerPage, block0);
-                fillBlockRows(block1Rows, rowsPerPage, block1);
-
-                var lastRowCount;
-                scope.$watch(checkRowModel);
-
-                return;
-
-                function checkRowModel() {
-                    var rows = rowModelExpression(scope),
-                            newCount = rows.length;
-
-                    if (newCount != lastRowCount) {
-                        var indicatorHeight = Math.max(10, viewPortHeight / (rowHeight * newCount) * viewPortHeight);
-                        indicator[0].style.height = indicatorHeight+'px';
-
-                        // TODO: how to recreate the animation??
-                        // TODO: need to keep the current position!
-                        // TODO: keep the gesture
-                        // TODO: How to destroy the player??
-                        var animation = createAnimation(newCount, function(pageIndices) {
-                            rowsParentScope.$apply(function() {
-                                var i;
-                                for (i=0; i<pageIndices.length; i++) {
-                                    updatePage(pageIndices[i], rows);
-                                }
-                            });
-                        });
-
-                        if (!scrollAnimation) {
-                            scrollAnimation = createScrollAnimation(animation);
-                            updatePage(0, rows);
-                            updatePage(1, rows);
-                            console.log('created animation');
-                        } else {
-                            scrollAnimation.updateAnimation(animation);
-                            // TOOD: This needs to be a different page index! updatePage(0, rows);
-                            // TODO: This needs to be a different page index! updatePage(1, rows);
-                            console.log('updated animation');
-                        }
-                    }
-                    return lastRowCount = newCount;
-                }
-
-                function createRow(parent) {
-                    var childScope = rowsParentScope.$new();
-                    var row = rowLink(childScope, function(clone) {
-                        parent.append(clone);
-                    });
-                    return {
-                        scope: childScope,
-                        elm: row
-                    };
-                }
-
-                function fillBlockRows(blockRows, count, parent) {
-                    var i;
-                    for (i=blockRows.length; i<count; i++) {
-                        blockRows.push(createRow(parent));
-                    }
-                }
-
-                function updatePage(pageIndex, rowModel) {
-                    var targetRows = pageIndex % 2 ? block1Rows : block0Rows,
-                        i;
-                    for (i=0; i<rowsPerPage; i++) {
-                        targetRows[i].scope.row = rowModel[pageIndex * rowsPerPage + i];
-                    }
-                }
-
-                function createScrollAnimation(animation) {
-                    var headerFooterSlowDownFactor = 5,
-                    // estimate header/footer as high as a row
-                        headerDuration = 1 * headerFooterSlowDownFactor,
-                        footerDuration = 1 * headerFooterSlowDownFactor;
-
-                    // document.timeline.play(totalAnimation());
-                    return new TouchAnimation({
-                        animation: animation,
-                        // TODO: move this into the gesture property as pixelToTime
-                        timeToPixelRatio: rowHeight * -1,
-                        gesture: {type: 'y', element: viewPort},
-                        headerDuration: headerDuration,
-                        footerDuration: footerDuration
-                    });
-                }
-
-                function createAnimation(rowCount, renderPages) {
-                    var headerFooterSlowDownFactor = 5,
-                    // estimate header/footer as high as a row
-                        headerDuration = 1 * headerFooterSlowDownFactor,
-                        footerDuration = 1 * headerFooterSlowDownFactor,
-                        contentDuration = rowCount - (viewPortHeight / rowHeight);
-
-                    var animationParts = {
-                        header: headerAnimation(),
-                        footer: footerAnimation(),
-                        content: contentAnimation()
-                    };
-                    ctrl.decorateAnimation(animationParts);
-
-                    return new ParGroup([new SeqGroup([animationParts.header, animationParts.content, animationParts.footer]), indicatorAnimation()]);
-
-                    function indicatorAnimation() {
-                        var indicatorHeight = utils.getHeight(indicator[0]);
-                        var start = new Animation(indicator[0], [
-                            {offset: 0, transform: 'translateZ(0) translateY(-'+(indicatorHeight*0.5)+'px)'},
-                            {offset: 1, transform: 'translateZ(0) translateY(0)'}
-                        ], headerDuration);
-                        var middle = new Animation(indicator[0], [
-                            {offset: 0, transform: 'translateZ(0) translateY(0px)'},
-                            {offset: 1, transform: 'translateZ(0) translateY('+(viewPortHeight-indicatorHeight)+'px)'}
-                        ], contentDuration);
-                        var end = new Animation(indicator[0], [
-                            {offset: 0, transform: 'translateZ(0) translateY('+(viewPortHeight-indicatorHeight)+'px)'},
-                            {offset: 1, transform: 'translateZ(0) translateY('+(viewPortHeight-indicatorHeight + indicatorHeight*0.5)+'px)'}
-                        ], footerDuration);
-                        return new SeqGroup([start, middle, end]);
-                    }
-
-                    function headerAnimation() {
-                        var headerAnimation = new Animation(innerViewport[0], [
-                            {offset: 0, transform: 'translateZ(0) translateY('+headerHeight+'px)'},
-                            {offset: 1, transform: 'translateZ(0) translateY(0px)'}
-                        ], headerDuration);
-                        return headerAnimation;
-                    }
-
-                    function footerAnimation() {
-                        var footerAnimation = new Animation(innerViewport[0], [
-                            {offset: 0, transform: 'translateZ(0) translateY(0px)'},
-                            {offset: 1, transform: 'translateZ(0) translateY(-'+footerHeight+'px)'}
-                        ], {
-                            duration: footerDuration
-                        });
-                        return footerAnimation;
-                    }
-                    function contentAnimation() {
-                        var blockDuration = 2*rowsPerPage,
-                        // TODO Bug: Setting this to Infinity and adding a oniteration event listener
-                        // stops the animation here!
-                                blockIterations = 100;
-                        var block0Anim = new Animation(block0[0], [
-                            { offset: 0, transform: 'translateZ(0) translateY(100%)' },
-                            { offset: 1, transform: 'translateZ(0) translateY(-100%)' }
-                        ], {
-                            iterationStart: 0.5,
-                            duration: blockDuration,
-                            iterations: blockIterations
-                        });
-
-                        var block1Anim = new Animation(block1[0], [
-                            { offset: 0, transform: 'translateZ(0) translateY(0%)' },
-                            { offset: 1, transform: 'translateZ(0) translateY(-200%)' }
-                        ], {
-                            duration: blockDuration,
-                            iterations: blockIterations
-                        });
-
-                        // TODO Bugs: with the events (why we are using a CustomEffect
-                        // and not onstart/onend/oniterate):
-                        // - no events while scrubbing backwards
-                        // - no events during running velocity animation. This might be due to the fact that
-                        //   we reparent the animation temporarily during animation.
-                        // - events in a seqgroup don't wait for the previous animations to fire
-
-                        var eventsAnim = new Animation(null, {
-                            sample: sampleEvents
-                        }, {
-                            duration: blockDuration,
-                            iterations: blockIterations
-                        });
-
-                        var block0Fill = 0,
-                                block1Fill = 1;
-                        function sampleEvents(timeFraction, iteration) {
-                            var block0FillNew,
-                                    block1FillNew;
-                            if (timeFraction >= 0.5) {
-                                block0FillNew = (iteration+1)*2;
-                            } else if (timeFraction < 0.5) {
-                                block0FillNew = iteration*2;
-                            }
-                            block1FillNew = iteration * 2 + 1;
-                            var changedPages = [];
-                            if (block0FillNew!=block0Fill) {
-                                block0Fill = block0FillNew;
-                                changedPages.push(block0Fill);
-                            }
-                            if (block1FillNew!=block1Fill) {
-                                block1Fill = block1FillNew;
-                                changedPages.push(block1Fill);
-                            }
-                            if (changedPages.length) {
-                                renderPages(changedPages);
-                            }
-                        }
-
-                        return new ParGroup([block0Anim, block1Anim, eventsAnim], {
-                            duration: contentDuration
-                        });
-                    }
-                }
-            }
-
-            function NgScrollerController() {
-                this.animationDecorators = [];
-                var self = this;
-                this.decorateAnimation = function(animation) {
-                    angular.forEach(self.animationDecorators, function(decorator) {
-                        decorator(animation);
-                    });
-                };
-            }
-        }]);
 
     </script>
     </body>
