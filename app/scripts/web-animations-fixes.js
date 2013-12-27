@@ -16,3 +16,38 @@ TimedItem.prototype._modulusWithClosedOpenRange = function(x, range) {
   var result = modulus < 0 ? modulus + range : modulus;
   return result;
 };
+
+// TODO Bugs: with the events (why we are using a CustomEffect
+// and not onstart/onend/oniterate):
+// - no events while scrubbing backwards
+// - no events during running velocity animation. This might be due to the fact that
+//   we reparent the animation temporarily during animation.
+// - events in a seqgroup don't wait for the previous animations to fire
+function fixedOnIterate(animation, listener) {
+  var timing = {};
+  if (animation.duration) {
+    timing.duration = animation.duration;
+  }
+  if (animation.iterations) {
+    timing.iterations = animation.iterations;
+  }
+  if (animation.delay) {
+    timing.delay = animation.delay;
+  }
+
+  var eventsAnim = new Animation(null, {
+    sample: sampleEvents
+  }, animation.specified);
+
+  var oldIteration;
+  function sampleEvents(timeFraction, iteration) {
+    if (iteration !== oldIteration) {
+      listener({
+        iterationIndex: iteration
+      });
+      oldIteration = iteration;
+    }
+  }
+
+  return new ParGroup([animation, eventsAnim]);
+}

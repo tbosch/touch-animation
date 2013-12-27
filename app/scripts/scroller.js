@@ -65,16 +65,12 @@ angular.module('scroll').directive('ngScroller', ['touchAnimation', 'animationBu
       // not when the rows change!
       // TODO: need to keep the current position!
       // TODO: How to destroy the player??
-      var animation = createAnimation(rows.length, function (pageIndices) {
+      var animation = createAnimation(rows.length, function (pageIndex) {
         scope.$apply(function () {
-          var i, pageIndex;
-          for (i = 0; i < pageIndices.length; i++) {
-            pageIndex = pageIndices[i];
-            if (pageIndex % 2) {
-              block1page = pageIndex;
-            } else {
-              block0page = pageIndex;
-            }
+          if (pageIndex % 2) {
+            block1page = pageIndex;
+          } else {
+            block0page = pageIndex;
           }
           updateBlockRows();
         });
@@ -118,7 +114,7 @@ angular.module('scroll').directive('ngScroller', ['touchAnimation', 'animationBu
       });
     }
 
-    function createAnimation(rowCount, renderPages) {
+    function createAnimation(rowCount, renderPage) {
       var builder = animationBuilder();
       builder.rowCount = rowCount;
       ctrl.decorateAnimation(builder);
@@ -140,6 +136,10 @@ angular.module('scroll').directive('ngScroller', ['touchAnimation', 'animationBu
           iterations: blockIterations
         });
 
+        block0Anim = fixedOnIterate(block0Anim, function(event) {
+          renderPage(event.iterationIndex * 2);
+        });
+
         var block1Anim = new Animation(block1[0], [
           { offset: 0, transform: 'translateZ(0) translateY(0%)' },
           { offset: 1, transform: 'translateZ(0) translateY(-200%)' }
@@ -148,47 +148,11 @@ angular.module('scroll').directive('ngScroller', ['touchAnimation', 'animationBu
           iterations: blockIterations
         });
 
-        // TODO Bugs: with the events (why we are using a CustomEffect
-        // and not onstart/onend/oniterate):
-        // - no events while scrubbing backwards
-        // - no events during running velocity animation. This might be due to the fact that
-        //   we reparent the animation temporarily during animation.
-        // - events in a seqgroup don't wait for the previous animations to fire
-
-        var eventsAnim = new Animation(null, {
-          sample: sampleEvents
-        }, {
-          duration: blockDuration,
-          iterations: blockIterations
+        block1Anim = fixedOnIterate(block1Anim, function(event) {
+          renderPage(event.iterationIndex * 2 + 1);
         });
 
-        var block0Fill = 0,
-          block1Fill = 1;
-
-        function sampleEvents(timeFraction, iteration) {
-          var block0FillNew,
-            block1FillNew;
-          if (timeFraction >= 0.5) {
-            block0FillNew = (iteration + 1) * 2;
-          } else if (timeFraction < 0.5) {
-            block0FillNew = iteration * 2;
-          }
-          block1FillNew = iteration * 2 + 1;
-          var changedPages = [];
-          if (block0FillNew != block0Fill) {
-            block0Fill = block0FillNew;
-            changedPages.push(block0Fill);
-          }
-          if (block1FillNew != block1Fill) {
-            block1Fill = block1FillNew;
-            changedPages.push(block1Fill);
-          }
-          if (changedPages.length) {
-            renderPages(changedPages);
-          }
-        }
-
-        builder.addAnimation('content', 50, new ParGroup([block0Anim, block1Anim, eventsAnim]));
+        builder.addAnimation('content', 50, new ParGroup([block0Anim, block1Anim]));
       }
     }
   }
