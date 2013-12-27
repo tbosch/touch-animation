@@ -25,69 +25,143 @@ angular.module('scroll').factory('gesture', ['$rootElement', function($rootEleme
     $rootElement.on('touchstart touchmove touchend mousedown mousemove mouseup', touchMouseEvent);
   }
 
-  function touchMouseEvent(e) {
-    var pressed = isPressed(e),
-        pos = getPos(e),
-        diff, absDiff, gestureType;
+  function handleGestureDetection(event) {
+    var diff, absDiff, gestureType, result;
+    if (event.pressed) {
+      if (pressStart) {
 
-    if (pressStart) {
-      diff = {
-         x: pos.x - pressStart.x,
-         y: pos.y - pressStart.y
-      };
-      absDiff = {
-        x: Math.abs(diff.x),
-        y: Math.abs(diff.y)
-      }
-    }
-
-    if (!pressed) {
-      pressStart = null;
-      if (currentGesture) {
-        endGesture(currentGesture.listener, diff[currentGesture.type]);
-        currentGesture = null;
-      }
-    } else if (currentGesture) {
-      updateGesture(currentGesture.listener, diff[currentGesture.type]);
-    } else {
-      if (!pressStart) {
-        pressStart = pos;
-      } else {
+        // ignore mousedown/up emulation after touch events
+        if (event.touch !== pressStart.touch) {
+          return;
+        }
+        diff = {
+          x: event.pos.x - pressStart.pos.x,
+          y: event.pos.y - pressStart.pos.y
+        };
+        absDiff = {
+          x: Math.abs(diff.x),
+          y: Math.abs(diff.y)
+        };
         if (Math.max(absDiff.x, absDiff.y) > GESTURE_START_DISTANCE) {
           if (absDiff.x > absDiff.y) {
             gestureType = 'x';
           } else {
             gestureType = 'y';
           }
-          currentGesture = {
-            type: gestureType,
-            listener: startGesture(gestureType, angular.element(e.target))
-          };
+          result = gestureType;
+          pressStart = null;
         }
+      } else {
+        pressStart = {
+          pos: event.pos,
+          touch: event.touch
+        };
+        angular.forEach(findListeners(angular.element(event.target)), function(listener) {
+          listener({
+            type: 'prepare'
+          });
+        });
+      }
+    } else {
+      pressStart = null;
+    }
+    return result;
+  }
+
+  function handleGesture(event, startGestureType) {
+    var diff, newDuration, newOffset, newVelocity;
+    if (currentGesture) {
+      // ignore mousedown/up emulation after touch events
+      if (event.touch !== currentGesture.touch) {
+        return;
+      }
+
+      newDuration = event.timeStamp - currentGesture.start.time;
+      newOffset = event.pos[currentGesture.type] - currentGesture.start.pos;
+      // calculate the velocity in seconds, as web animations are also
+      // using seconds!
+      newVelocity = (newOffset - currentGesture.current.offset) / (newDuration - currentGesture.current.duration) * 1000;
+      if (newVelocity === 0 || newVelocity === Infinity || newVelocity === -Infinity || isNaN(newVelocity)) {
+        newVelocity = currentGesture.current.velocity;
+      }
+
+      currentGesture.current = {
+        offset: newOffset,
+        duration: newDuration,
+        velocity: newVelocity
+      };
+
+      if (currentGesture.listener) {
+        currentGesture.listener({
+          type: event.pressed?'move':'end',
+          gesture: currentGesture
+        });
+      }
+      if (!event.pressed) {
+        currentGesture = null;
+      }
+
+    } else if (startGestureType) {
+      currentGesture = {
+        type: startGestureType,
+        listener: findListener(startGestureType, angular.element(event.target)),
+        start: {
+          pos: event.pos[startGestureType],
+          time: event.timeStamp
+        },
+        current: {
+          offset: 0,
+          duration: 0,
+          velocity: 0
+        },
+        touch: event.touch
+      };
+      if (currentGesture.listener) {
+        currentGesture.listener({
+          type: 'start',
+          gesture: currentGesture
+        });
       }
     }
+    return currentGesture;
   }
 
-  function startGesture(type, element) {
-    var gestureListener;
-    var gestureListeners = element.inheritedData('$gestureListeners') || {};
-    gestureListener = gestureListeners[type];
-    if (gestureListener) {
-      gestureListener('start', 0);
-    }
-    return gestureListener;
+  function touchMouseEvent(e) {
+    var event = {
+        pressed: isPressed(e),
+        pos: getPos(e),
+        touch: isTouch(e),
+        target: e.target,
+        timeStamp: e.timeStamp
+      };
+
+    var startGestureType = handleGestureDetection(event);
+    handleGesture(event, startGestureType);
   }
 
-  function endGesture(listener, pixelOffset) {
-    if (listener) {
-      listener('end', pixelOffset);
+  function findListener(type, element) {
+    var listeners;
+    while (element.length) {
+      listeners = element.data('$gestureListeners');
+      if (listeners && listeners[type]) {
+        return listeners[type];
+      }
+      element = element.parent();
     }
+    return null;
   }
 
-  function updateGesture(listener, pixelOffset) {
-    if (listener) {
-      listener('move', pixelOffset);
+  function findListeners(element) {
+    var result = [],
+        listeners;
+    while (element.length) {
+      listeners = element.data('$gestureListeners');
+      angular.forEach(listeners, function(listener) {
+        result.push(listener);
+      });
+      element = element.parent();
     }
+    return result;
   }
 
   function getPos(event) {
@@ -110,10 +184,16 @@ angular.module('scroll').factory('gesture', ['$rootElement', function($rootEleme
     }
     // If the mouse goes off screen, is unpressed there and then goes
     // back on screen we don't get a touchend/mouseup event.
+    // TODO: Can we detect when the finger goes off the screen
+    // and then stop the gesture?
     if (event.changedTouches) {
       return !!event.changedTouches.length;
     }
     return !!event.which;
+  }
+
+  function isTouch(event) {
+    return event.type.indexOf('touch') === 0;
   }
 
   function preventBounceEffect() {

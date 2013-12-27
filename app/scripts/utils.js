@@ -6,6 +6,7 @@
     getWidth: getWidth,
     setPlayerCurrentTimeInRaf: setPlayerCurrentTimeInRafWithStop,
     animatePlayerTo: animatePlayerTo,
+    stopAnimatePlayer: stopAnimatePlayer,
     raf: raf
   };
 

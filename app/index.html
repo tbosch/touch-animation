@@ -130,7 +130,7 @@
             };
         });
 
-        mod.directive('ngScroller', ['$compile', '$parse', 'touchAnimation', function($compile, $parse, ScrollAnimation) {
+        mod.directive('ngScroller', ['$compile', '$parse', 'touchAnimation', function($compile, $parse, TouchAnimation) {
             return {
                 compile: function(element) {
                     element.addClass('scroll-viewport');
@@ -255,8 +255,9 @@
                         footerDuration = 1 * headerFooterSlowDownFactor;
 
                     // document.timeline.play(totalAnimation());
-                    return new ScrollAnimation({
+                    return new TouchAnimation({
                         animation: animation,
+                        // TODO: move this into the gesture property as pixelToTime
                         timeToPixelRatio: rowHeight * -1,
                         gesture: {type: 'y', element: viewPort},
                         headerDuration: headerDuration,
