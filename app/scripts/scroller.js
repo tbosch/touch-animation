@@ -6,13 +6,13 @@ angular.module('scroll').directive('ngScroller', ['touchAnimation', 'animationBu
 
       var block0 = angular.element('<div class="scroll-block0"></div>'),
           block0row = scrollContent.clone();
-      block0row.attr('ng-repeat', 'row in block0rows');
+      block0row.attr('ng-repeat', 'row in block0rows track by $index');
       block0.append(block0row);
       element.append(block0);
 
       var block1 = angular.element('<div class="scroll-block1"></div>'),
           block1row = scrollContent.clone();
-      block1row.attr('ng-repeat', 'row in block1rows');
+      block1row.attr('ng-repeat', 'row in block1rows track by $index');
       block1.append(block1row);
       element.append(block1);
 
@@ -55,31 +55,36 @@ angular.module('scroll').directive('ngScroller', ['touchAnimation', 'animationBu
 
     return;
 
+    var lastRowCount;
     function rowsChanged(rows) {
+      // TODO: Add a resize listener and update those variables only then!
       viewPortHeight = utils.getHeight(viewPort[0]);
       rowsPerPage = Math.ceil(viewPortHeight / rowHeight) + 1;
 
       updateBlockRows();
 
-      // TODO: recreate the animation when the gesture starts,
-      // not when the rows change!
-      // TODO: need to keep the current position!
-      // TODO: How to destroy the player??
-      var animation = createAnimation(rows.length, function (pageIndex) {
-        scope.$apply(function () {
-          if (pageIndex % 2) {
-            block1page = pageIndex;
-          } else {
-            block0page = pageIndex;
-          }
-          updateBlockRows();
-        });
-      });
+      if (rows.length !== lastRowCount) {
+        lastRowCount = rows.length;
+        layout();
+      }
 
-      if (!scrollAnimation) {
-        scrollAnimation = createScrollAnimation(animation);
-      } else {
-        scrollAnimation.updateAnimation(animation);
+      function layout() {
+        var animation = createAnimation(lastRowCount, function (pageIndex) {
+          scope.$apply(function () {
+            if (pageIndex % 2) {
+              block1page = pageIndex;
+            } else {
+              block0page = pageIndex;
+            }
+            updateBlockRows();
+          });
+        });
+
+        if (!scrollAnimation) {
+          scrollAnimation = createScrollAnimation(animation);
+        } else {
+          scrollAnimation.updateAnimation(animation);
+        }
       }
 
       function updateBlockRows() {
@@ -103,7 +108,6 @@ angular.module('scroll').directive('ngScroller', ['touchAnimation', 'animationBu
         headerDuration = 1 * headerFooterSlowDownFactor,
         footerDuration = 1 * headerFooterSlowDownFactor;
 
-      // document.timeline.play(totalAnimation());
       return new TouchAnimation({
         animation: animation,
         // TODO: move this into the gesture property as pixelToTime
