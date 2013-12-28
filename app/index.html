@@ -45,7 +45,7 @@
         <div scroll-footer style="background-color:grey;height:40px;">
             Bottom...
         </div>
-        <div scroll-row>
+        <div scroll-row swipe-to-delete>
             <label>
                 <input type="checkbox" ng-model="row.clicked">
                 Row <span ng-bind="row.index" ></span>
@@ -73,6 +73,7 @@
     <script src="scripts/scroll/scroll-footer.js"></script>
     <script src="scripts/scroll/scroll-indicator.js"></script>
     <script src="scripts/scroll/scroll-pull-to-refresh.js"></script>
+    <script src="scripts/scroll/swipeToDelete.js"></script>
 
     <script>
         var mod = angular.module('scroll');
