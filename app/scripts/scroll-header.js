@@ -10,12 +10,26 @@ angular.module('scroll').directive('scrollHeader', function () {
       element.addClass('scroll-header');
       ngScrollerCtrl.animationDecorators.push(animationDecorator);
 
-      function animationDecorator(builder) {
+      function animationDecorator(builder, effects) {
         var headerAnimation = new Animation(element.parent()[0], [
           {offset: 0, transform: 'translateZ(0) translateY(' + headerHeight + 'px)'},
           {offset: 1, transform: 'translateZ(0) translateY(0px)'}
         ], headerDuration);
         builder.addAnimation('header', 0, headerAnimation);
+
+        effects.push({
+          animationName: 'header',
+          listener: headerEffect
+        });
+
+        function headerEffect(event) {
+          // TODO: Is this the right calculation?
+          return {
+            targetTime: event.animationEnd,
+            duration: 0.3,
+            easing: 'ease-out'
+          };
+        }
       }
     }
   };

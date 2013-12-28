@@ -103,30 +103,28 @@ angular.module('scroll').directive('ngScroller', ['touchAnimation', 'animationBu
     }
 
     function createScrollAnimation(animation) {
-      var headerFooterSlowDownFactor = 5,
-      // estimate header/footer as high as a row
-        headerDuration = 1 * headerFooterSlowDownFactor,
-        footerDuration = 1 * headerFooterSlowDownFactor;
-
       return new TouchAnimation({
-        animation: animation,
-        // TODO: move this into the gesture property as pixelToTime
+        animation: animation.animation,
+        effects: animation.effects,
         timeToPixelRatio: rowHeight * -1,
         gesture: {type: 'y', element: viewPort},
-        headerDuration: headerDuration,
-        footerDuration: footerDuration
+        startAnimation: 'content'
       });
     }
 
     function createAnimation(rowCount, renderPage) {
-      var builder = animationBuilder();
+      var builder = animationBuilder(),
+          effects = [];
       builder.rowCount = rowCount;
-      ctrl.decorateAnimation(builder);
-      contentAnimation(builder);
+      ctrl.decorateAnimation(builder, effects);
+      contentAnimation(builder, effects);
 
-      return builder.build();
+      return {
+        animation: builder.build(),
+        effects: effects
+      };
 
-      function contentAnimation(builder) {
+      function contentAnimation(builder, effects) {
         var contentDuration = rowCount - (viewPortHeight / rowHeight);
         var blockDuration = 2 * rowsPerPage,
             blockIterations = contentDuration / blockDuration;
@@ -157,6 +155,25 @@ angular.module('scroll').directive('ngScroller', ['touchAnimation', 'animationBu
         });
 
         builder.addAnimation('content', 50, new ParGroup([block0Anim, block1Anim]));
+
+        effects.push({
+          animationName: 'content',
+          listener: contentEffect
+        });
+
+        function contentEffect(event) {
+          // TODO: Is this the right calculation?
+          var gestureVelocity = event.velocity,
+            oldTime = event.currentTime,
+            newTime = oldTime + gestureVelocity / 2;
+          newTime = Math.max(event.animationStart, newTime);
+          newTime = Math.min(event.animationEnd, newTime);
+          return {
+            targetTime: newTime,
+            duration: Math.abs((newTime - oldTime) / gestureVelocity * 2),
+            easing: 'ease-out'
+          };
+        }
       }
     }
   }
@@ -164,9 +181,9 @@ angular.module('scroll').directive('ngScroller', ['touchAnimation', 'animationBu
   function NgScrollerController() {
     this.animationDecorators = [];
     var self = this;
-    this.decorateAnimation = function (builder) {
+    this.decorateAnimation = function (builder, effects) {
       angular.forEach(self.animationDecorators, function (decorator) {
-        decorator(builder);
+        decorator(builder, effects);
       });
     };
   }

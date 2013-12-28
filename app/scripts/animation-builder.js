@@ -57,7 +57,11 @@ angular.module('scroll').factory('animationBuilder', function() {
         });
         res = par;
       }
-      return res;
+      return {
+        animation: res,
+        animationStart: getAnimationStart,
+        animationEnd: getAnimationEnd
+      };
 
       function getAnimationStart(name) {
         var i, entry, start = 0;
@@ -77,6 +81,4 @@ angular.module('scroll').factory('animationBuilder', function() {
     }
 
   }
-
-
 });

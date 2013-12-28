@@ -10,7 +10,7 @@ angular.module('scroll').directive('scrollFooter', function () {
       element.addClass('scroll-footer');
       ngScrollerCtrl.animationDecorators.push(animationDecorator);
 
-      function animationDecorator(builder) {
+      function animationDecorator(builder, effects) {
         var footerAnimation = new Animation(element.parent()[0], [
           {offset: 0, transform: 'translateZ(0) translateY(0px)'},
           {offset: 1, transform: 'translateZ(0) translateY(-' + footerHeight + 'px)'}
@@ -18,6 +18,21 @@ angular.module('scroll').directive('scrollFooter', function () {
           duration: footerDuration
         });
         builder.addAnimation('footer', 100, footerAnimation);
+
+        effects.push({
+          animationName: 'footer',
+          listener: footerEffect
+        });
+
+        function footerEffect(event) {
+          // TODO: Is this the right calculation?
+          return {
+            targetTime: event.animationStart,
+            duration: 0.3,
+            easing: 'ease-out'
+          };
+        }
+
       }
     }
   };
