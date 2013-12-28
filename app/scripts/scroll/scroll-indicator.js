@@ -1,12 +1,12 @@
 angular.module('scroll').directive('scrollIndicator', function () {
   return {
-    require: 'ngScroller',
-    // should be executed AFTER ngScroller directive!
+    require: 'scroller',
+    // should be executed AFTER scroller directive!
     priority: -1,
     link: function (scope, element, attrs, ngScrollerCtrl) {
       var indicator = angular.element('<div class="scroll-indicator"></div>');
       element.append(indicator);
-      var viewPortHeight = utils.getHeight(element[0]);
+      var viewPortHeight = element.height();
 
       ngScrollerCtrl.animationDecorators.push(animationDecorator);
 

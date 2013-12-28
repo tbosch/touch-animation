@@ -1,6 +1,6 @@
 angular.module('scroll').directive('scrollPullToRefresh', function () {
   return {
-    require: '^ngScroller',
+    require: '^scroller',
     link: function (scope, element, attrs, ngScrollerCtrl) {
       ngScrollerCtrl.animationDecorators.push(animationDecorator);
 

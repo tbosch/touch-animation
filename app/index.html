@@ -38,14 +38,14 @@
 
     <button ng-click="scroll.addRows(20)">Add 20</button>
 
-    <div ng-scroller="scroll.rows" scroll-indicator style="height: 400px; border: 1px solid black;">
+    <div scroller="scroll.rows" scroll-indicator style="height: 400px; border: 1px solid black;">
         <div scroll-header style="background-color:grey;height:40px;">
             <div style="text-align: center" scroll-pull-to-refresh>Pull to refresh</div>
         </div>
         <div scroll-footer style="background-color:grey;height:40px;">
             Bottom...
         </div>
-        <div class="scroll-row">
+        <div scroll-row>
             <label>
                 <input type="checkbox" ng-model="row.clicked">
                 Row <span ng-bind="row.index" ></span>
@@ -63,16 +63,16 @@
     <script src="scripts/web-animations.js"></script>
     <script src="scripts/web-animations-fixes.js"></script>
 
-    <script src="scripts/module.js"></script>
-    <script src="scripts/utils.js"></script>
-    <script src="scripts/gesture.js"></script>
-    <script src="scripts/animation-builder.js"></script>
-    <script src="scripts/touch-animation.js"></script>
-    <script src="scripts/scroller.js"></script>
-    <script src="scripts/scroll-header.js"></script>
-    <script src="scripts/scroll-footer.js"></script>
-    <script src="scripts/scroll-indicator.js"></script>
-    <script src="scripts/scroll-pull-to-refresh.js"></script>
+    <script src="scripts/touch-animation/module.js"></script>
+    <script src="scripts/touch-animation/animation-utils.js"></script>
+    <script src="scripts/touch-animation/animation-gesture.js"></script>
+    <script src="scripts/touch-animation/touch-animation.js"></script>
+    <script src="scripts/scroll/module.js"></script>
+    <script src="scripts/scroll/scroller.js"></script>
+    <script src="scripts/scroll/scroll-header.js"></script>
+    <script src="scripts/scroll/scroll-footer.js"></script>
+    <script src="scripts/scroll/scroll-indicator.js"></script>
+    <script src="scripts/scroll/scroll-pull-to-refresh.js"></script>
 
     <script>
         var mod = angular.module('scroll');

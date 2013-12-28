@@ -1,4 +1,4 @@
-angular.module('scroll').factory('gesture', ['$rootElement', function($rootElement) {
+angular.module('touchAnimation').factory('animationGesture', ['$rootElement', 'animationUtils', function($rootElement, animationUtils) {
   var GESTURE_START_DISTANCE = 5,
       pressStart,
       currentGesture;
@@ -144,7 +144,7 @@ angular.module('scroll').factory('gesture', ['$rootElement', function($rootEleme
     while (element.length) {
       listeners = element.data('$gestureListeners');
       if (listeners && listeners[type]) {
-        return listeners[type];
+        return rafThrottledEventListener(listeners[type]);
       }
       element = element.parent();
     }
@@ -203,5 +203,27 @@ angular.module('scroll').factory('gesture', ['$rootElement', function($rootEleme
     $rootElement.on("scroll", function(e) {
       e.preventDefault();
     });
+  }
+
+
+  function rafThrottledEventListener(listener) {
+    var nextMoveEvent = null;
+    return function(event) {
+      if (event.type === 'move') {
+        if (!nextMoveEvent) {
+          nextMoveEvent = event;
+          animationUtils.raf(function() {
+            listener(nextMoveEvent);
+            nextMoveEvent = null;
+          });
+        } else {
+          nextMoveEvent = event;
+        }
+      } else {
+        animationUtils.raf(function() {
+          listener(event);
+        });
+      }
+    };
   }
 }]);

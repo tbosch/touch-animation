@@ -1,11 +1,11 @@
 angular.module('scroll').directive('scrollHeader', function () {
   return {
-    require: '^ngScroller',
+    require: '^scroller',
     link: function (scope, element, attrs, ngScrollerCtrl) {
       var headerFooterSlowDownFactor = 5,
       // estimate header/footer as high as a row
         headerDuration = 1 * headerFooterSlowDownFactor,
-        headerHeight = utils.getHeight(element[0]);
+        headerHeight = element.height();
 
       element.addClass('scroll-header');
       ngScrollerCtrl.animationDecorators.push(animationDecorator);
@@ -25,7 +25,7 @@ angular.module('scroll').directive('scrollHeader', function () {
         function headerEffect(event) {
           // TODO: Is this the right calculation?
           return {
-            targetTime: event.animationEnd,
+            targetTime: event.animation.endTime,
             duration: 0.3,
             easing: 'ease-out'
           };

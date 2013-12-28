@@ -1,3 +1,6 @@
+// TODO: discuss these bug fixes
+// with the web-animations team!
+
 function floatingEqual(n1, n2) {
   // comparison for floating point numbers need to compensate
   // for an epsilon rounding error.
@@ -42,9 +45,11 @@ function fixedOnIterate(animation, listener) {
   var oldIteration;
   function sampleEvents(timeFraction, iteration) {
     if (iteration !== oldIteration) {
-      listener({
-        iterationIndex: iteration
-      });
+      window.setTimeout(function() {
+        listener({
+          iterationIndex: iteration
+        });
+      },0);
       oldIteration = iteration;
     }
   }
