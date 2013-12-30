@@ -8,7 +8,7 @@ angular.module('scroll').directive('scrollFooter', function () {
 
       element.addClass('scroll-footer');
       ngScrollerCtrl.addAnimationDecorator(0, animationDecorator);
-      ngScrollerCtrl.effects.push(footerEffect);
+      element.parent().on('slideYEnd', footerEffect);
 
       function animationDecorator(animationSpec) {
         animationSpec.footer = {
@@ -31,16 +31,15 @@ angular.module('scroll').directive('scrollFooter', function () {
       }
 
       function footerEffect(event, touchAnimation) {
+        var touchAnimation = ngScrollerCtrl.scrollAnimation;
         var footerAnimation = touchAnimation.getAnimationByName('footer');
-        if (event.currentTime < footerAnimation.startTime) {
+        if (touchAnimation.currentTime() < footerAnimation.startTime) {
           return false;
         }
-        // TODO: Is this the right calculation?
-        return {
-          targetTime: footerAnimation.startTime,
+        touchAnimation.goTo(footerAnimation.startTime, {
           duration: 0.3,
           easing: 'ease-out'
-        };
+        });
       }
     }
   };

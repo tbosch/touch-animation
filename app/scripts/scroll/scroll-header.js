@@ -9,7 +9,7 @@ angular.module('scroll').directive('scrollHeader', function () {
 
       element.addClass('scroll-header');
       ngScrollerCtrl.addAnimationDecorator(0, animationDecorator);
-      ngScrollerCtrl.effects.push(headerEffect);
+      element.parent().on('slideYEnd', headerEffect);
 
       function animationDecorator(animationSpec) {
         animationSpec.header = {
@@ -31,17 +31,16 @@ angular.module('scroll').directive('scrollHeader', function () {
         animationSpec.main.children.unshift('header');
       }
 
-      function headerEffect(event, touchAnimation) {
+      function headerEffect() {
+        var touchAnimation = ngScrollerCtrl.scrollAnimation;
         var headerAnimation = touchAnimation.getAnimationByName('header');
-        if (event.currentTime > headerAnimation.endTime) {
+        if (touchAnimation.currentTime() > headerAnimation.endTime) {
           return false;
         }
-        // TODO: Is this the right calculation?
-        return {
-          targetTime: headerAnimation.endTime,
+        touchAnimation.goTo(headerAnimation.endTime, {
           duration: 0.3,
           easing: 'ease-out'
-        };
+        });
       }
     }
   };

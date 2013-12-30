@@ -26,22 +26,28 @@
   }
 })();
 
+// TODO: This should no more be needed!
 angular.module('touchAnimation').factory('animationUtils', function() {
+  return animationUtils;
+});
+
+
+(function() {
   var raf = initRaf();
   var isArray = angular.isArray,
     isObject = angular.isObject,
     isFunction = angular.isFunction;
 
   // TODO: discuss these methods with the web-animations team!
-  return {
+  window.animationUtils = {
     animatePlayerTo: animatePlayerTo,
-    stopAnimatePlayer: stopAnimatePlayer,
     raf: raf,
-    indexAnimationByName: indexAnimationByName,
     AnimationSpec: createAnimationSpec(),
     copy: copy,
     equals: equals
   };
+
+  return;
 
   // ------------------
 
@@ -69,9 +75,7 @@ angular.module('touchAnimation').factory('animationUtils', function() {
   }
 
   // TODO: Is there a builtin way to do this?
-  var animatePlayer;
   function animatePlayerTo(player, targetTime, duration, easing, done) {
-    stopAnimatePlayer(player);
     var lastTimeFraction,
       start = player.currentTime,
       timeDiff = targetTime - start,
@@ -85,22 +89,7 @@ angular.module('touchAnimation').factory('animationUtils', function() {
       stop();
       done && done();
     };
-    // TODO: What is the correct way to delete
-    // a player with a custom effect?
-    // Right now we are reusing the old one...
-    if (animatePlayer) {
-      animatePlayer.source = anim;
-      animatePlayer.playbackRate = 1;
-      animatePlayer.currentTime = 0;
-      animatePlayer.paused = false;
-    } else {
-      animatePlayer = document.timeline.play(anim);
-    }
-
-    player.animatePlayer = {
-      stop: stop
-    };
-
+    var animatePlayer = document.timeline.play(anim);
     return stop;
 
     function sample(timeFraction) {
@@ -115,20 +104,10 @@ angular.module('touchAnimation').factory('animationUtils', function() {
     }
 
     function stop() {
+      // TODO: is this the right way to delete a player?
       animatePlayer.source = null;
       animatePlayer.paused = true;
     }
-  }
-
-  function indexAnimationByName(animation, target) {
-    target = target || {};
-    if (animation.name) {
-      target[animation.name] = animation;
-    }
-    angular.forEach(animation.children, function(child) {
-      indexAnimationByName(child, target);
-    });
-    return target;
   }
 
   function createAnimationSpec() {
@@ -327,4 +306,4 @@ angular.module('touchAnimation').factory('animationUtils', function() {
   }
 
 
-});
+})();

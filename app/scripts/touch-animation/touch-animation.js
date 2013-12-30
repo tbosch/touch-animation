@@ -1,47 +1,47 @@
-angular.module('touchAnimation').factory('touchAnimation', ['animationGesture', 'animationUtils', function(animationGesture, animationUtils) {
-
-  // negative, so that the user can scroll to the top
-  // but the animation goes forward.
-  var TIME_TO_PIXEL_RATIO = -1;
+angular.module('touchAnimation').factory('touchAnimation', ['animationUtils', function(animationUtils) {
 
   return touchAnimationFactory;
 
   function touchAnimationFactory(options) {
     var player,
-      effects = options.effects || [],
       animationsByName,
       self,
-      startAnimation = options.startAnimation,
-      animationFactory = options.animationFactory;
+      animationFactory = options.animationFactory,
+      mainElement = options.gesture.element;
 
     updateAnimationIfNeeded();
-    animationGesture(options.gesture.element, options.gesture.type, gestureListener);
+
+    var gestureStartTime,
+        velocityEffectStop;
+    mainElement.on('slide'+options.gesture.type.toUpperCase()+'Start', function(e, gesture) {
+      gestureStartTime = player.currentTime;
+    });
+    mainElement.on('slide'+options.gesture.type.toUpperCase()+'Move', function(e, gesture) {
+      var pixelOffset = gesture.offset;
+      var newTime = gestureStartTime + (pixelOffset * -1);
+      if (newTime<0) {
+        newTime = 0;
+      }
+      velocityEffectStop = goTo(newTime);
+    });
 
     return self = {
       updateAnimationIfNeeded: updateAnimationIfNeeded,
-      getAnimationByName: getAnimationByName
+      getAnimationByName: getAnimationByName,
+      currentTime: currentTime,
+      goTo: goTo
     };
 
-    function gestureListener(event) {
-      var action = event.type,
-        pixelOffset = (event.gesture && event.gesture.current.offset) || 0;
-      if (action === 'start') {
-        event.gesture.playerStartTime = player.currentTime;
+    function goTo(targetTime, timing) {
+      if (!timing) {
+        player.currentTime = targetTime;
+      } else {
+        return animationUtils.animatePlayerTo(player, targetTime, timing.duration || 1, timing.easing || 'linear');
       }
-      if (action === 'move' || action === 'start') {
-        var newTime = event.gesture.playerStartTime + (pixelOffset / TIME_TO_PIXEL_RATIO);
-        if (newTime<0) {
-          newTime = 0;
-        }
-        player.currentTime = newTime;
-      }
-      if (action === 'end') {
-        var gestureVelocity = event.gesture.current.velocity / TIME_TO_PIXEL_RATIO;
-        executeEffects(gestureVelocity);
-      }
-      if (action === 'prepare') {
-        animationUtils.stopAnimatePlayer(player);
-      }
+    }
+
+    function currentTime() {
+      return player.currentTime;
     }
 
     function getAnimationByName(name) {
@@ -61,39 +61,9 @@ angular.module('touchAnimation').factory('touchAnimation', ['animationGesture', 
       if (!player) {
         player = document.timeline.play(animationsByName.main);
         player.paused = true;
-        if (startAnimation) {
-          var startTime = animationsByName[startAnimation].startTime;
-          player.currentTime = startTime;
-        }
       } else {
         player.source = animationsByName.main;
       }
     }
-
-    function executeEffects(currentVelocity) {
-      var i, effect, animation, now;
-      now = player.currentTime;
-      for (i=0; i<effects.length; i++) {
-        effect = effects[i];
-        animation = effect({
-          currentTime: now,
-          velocity: currentVelocity,
-          animation: effect.animation
-        }, self);
-        if (animation) {
-          var targetTime = animation.targetTime;
-          targetTime = boundedTime(targetTime);
-          animationUtils.animatePlayerTo(player, targetTime, animation.duration, animation.easing || 'linear');
-          return;
-        }
-      }
-    }
-
-    function boundedTime(targetTime) {
-      targetTime = Math.max(0, targetTime);
-      targetTime = Math.min(player.source.duration, targetTime);
-      return targetTime;
-    }
-
   }
 }]);

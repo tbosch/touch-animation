@@ -37,8 +37,6 @@ angular.module('scroll').directive('scroller', ['touchAnimation', 'animationUtil
     ctrl.rowHeight = rowHeight;
     rowTemplate.remove();
 
-    var scrollAnimation;
-
     var innerViewport = angular.element('<div class="inner-viewport"></div>'),
       block0 = angular.element(viewPort[0].querySelector('.scroll-block0')),
       block1 = angular.element(viewPort[0].querySelector('.scroll-block1'));
@@ -73,17 +71,17 @@ angular.module('scroll').directive('scroller', ['touchAnimation', 'animationUtil
       }
 
       function layout() {
-        if (!scrollAnimation) {
-          scrollAnimation = touchAnimation({
-            // TODO: hand in the animation hash and the name of the total animation!
+        if (!ctrl.scrollAnimation) {
+          ctrl.scrollAnimation = touchAnimation({
             animationFactory: animationFactory,
-            effects: ctrl.effects,
             timeToPixelRatio: rowHeight * -1,
-            gesture: {type: 'y', element: viewPort},
-            startAnimation: 'content'
+            gesture: {type: 'y', element: viewPort}
           });
+          ctrl.scrollAnimation.goTo(ctrl.scrollAnimation.getAnimationByName('content').startTime);
+          viewPort.on('slideYEnd', contentEffect);
+          viewPort.on('pointerstart', stopContentEffect);
         } else {
-          scrollAnimation.updateAnimationIfNeeded();
+          ctrl.scrollAnimation.updateAnimationIfNeeded();
         }
       }
 
@@ -165,7 +163,9 @@ angular.module('scroll').directive('scroller', ['touchAnimation', 'animationUtil
         animationSpec.content = {
           type: 'par',
           // extra information for animation decorators
-          // TODO: Move into a "meta" object
+          // TODO: Move into a "meta" object in the animationSpec
+          // which is copied into the real animationsByName hash!
+          // -> by this, e.g. the effects can use it too!
           rowCount: lastRowCount,
           rowHeight: rowHeight,
           children: [
@@ -180,12 +180,37 @@ angular.module('scroll').directive('scroller', ['touchAnimation', 'animationUtil
       }
     }
 
+    var _stopContentEffect;
+    function stopContentEffect() {
+      if (_stopContentEffect) {
+        stopContentEffect();
+        stopContentEffect = null;
+      }
+    }
 
+    function contentEffect(event, gesture) {
+      // TODO: Is this the right calculation?
+      var contentAnimation = ctrl.scrollAnimation.getAnimationByName('content'),
+        currentTime = ctrl.scrollAnimation.currentTime();
+      if (currentTime < contentAnimation.startTime || currentTime > contentAnimation.endTime) {
+        return false;
+      }
+
+      var gestureVelocity = gesture.velocity * -1,
+        oldTime = currentTime,
+        newTime = oldTime + gestureVelocity / 2;
+      newTime = Math.max(contentAnimation.startTime, newTime);
+      newTime = Math.min(contentAnimation.endTime, newTime);
+
+      _stopContentEffect = ctrl.scrollAnimation.goTo(newTime, {
+        duration: Math.abs((newTime - oldTime) / gestureVelocity * 2),
+        easing: 'ease-out'
+      });
+    }
   }
 
   function ScrollerController() {
     var animationDecorators = [];
-    this.effects = [contentEffect];
     this.addAnimationDecorator = function(order, decorator) {
       animationDecorators.push({
         order: order || 0,
@@ -203,26 +228,5 @@ angular.module('scroll').directive('scroller', ['touchAnimation', 'animationUtil
     };
   }
 
-  // TODO: Move this into a general event handler!
-  function contentEffect(event, touchAnimation) {
-    // TODO: Is this the right calculation?
-    var contentAnimation = touchAnimation.getAnimationByName('content');
-    if (event.currentTime < contentAnimation.startTime || event.currentTime > contentAnimation.endTime) {
-      return false;
-    }
-
-    var gestureVelocity = event.velocity,
-      oldTime = event.currentTime,
-      newTime = oldTime + gestureVelocity / 2;
-    newTime = Math.max(contentAnimation.startTime, newTime);
-    newTime = Math.min(contentAnimation.endTime, newTime);
-
-    // TODO: call the touchAnimation directly
-    return {
-      targetTime: newTime,
-      duration: Math.abs((newTime - oldTime) / gestureVelocity * 2),
-      easing: 'ease-out'
-    };
-  }
 
 }]);
