@@ -3,36 +3,44 @@ angular.module('scroll').directive('scrollFooter', function () {
     require: '^scroller',
     link: function (scope, element, attrs, ngScrollerCtrl) {
       var headerFooterSlowDownFactor = 5,
-      // estimate header/footer as high as a row
-        footerDuration = 1 * headerFooterSlowDownFactor,
-        footerHeight = element.height();
+        footerHeight = element.height(),
+        footerDuration = footerHeight * headerFooterSlowDownFactor;
 
       element.addClass('scroll-footer');
-      ngScrollerCtrl.animationDecorators.push(animationDecorator);
+      ngScrollerCtrl.addAnimationDecorator(0, animationDecorator);
+      ngScrollerCtrl.effects.push(footerEffect);
 
-      function animationDecorator(builder, effects) {
-        var footerAnimation = new Animation(element.parent()[0], [
-          {offset: 0, transform: 'translateZ(0) translateY(0px)'},
-          {offset: 1, transform: 'translateZ(0) translateY(-' + footerHeight + 'px)'}
-        ], {
-          duration: footerDuration
-        });
-        builder.addAnimation('footer', 100, footerAnimation);
+      function animationDecorator(animationSpec) {
+        animationSpec.footer = {
+          type: 'par',
+          children: ['footerMain']
+        };
 
-        effects.push({
-          animationName: 'footer',
-          listener: footerEffect
-        });
+        animationSpec.footerMain = {
+          type: 'atom',
+          target: element.parent()[0],
+          effect: [
+            {offset: 0, transform: 'translateZ(0) translateY(0px)'},
+            {offset: 1, transform: 'translateZ(0) translateY(-' + footerHeight + 'px)'}
+          ],
+          timing: {
+            duration: footerDuration
+          }
+        };
+        animationSpec.main.children.push('footer');
+      }
 
-        function footerEffect(event) {
-          // TODO: Is this the right calculation?
-          return {
-            targetTime: event.animation.startTime,
-            duration: 0.3,
-            easing: 'ease-out'
-          };
+      function footerEffect(event, touchAnimation) {
+        var footerAnimation = touchAnimation.getAnimationByName('footer');
+        if (event.currentTime < footerAnimation.startTime) {
+          return false;
         }
-
+        // TODO: Is this the right calculation?
+        return {
+          targetTime: footerAnimation.startTime,
+          duration: 0.3,
+          easing: 'ease-out'
+        };
       }
     }
   };

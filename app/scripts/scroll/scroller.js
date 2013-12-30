@@ -58,11 +58,12 @@ angular.module('scroll').directive('scroller', ['touchAnimation', 'animationUtil
 
     return;
 
-    var lastRowCount;
+    var lastRowCount, lastRows;
     function rowsChanged(rows) {
       // TODO: Add a resize listener and update those variables only then!
       viewPortHeight = viewPort.height();
       rowsPerPage = Math.ceil(viewPortHeight / rowHeight) + 1;
+      lastRows = rows;
 
       updateBlockRows();
 
@@ -72,118 +73,156 @@ angular.module('scroll').directive('scroller', ['touchAnimation', 'animationUtil
       }
 
       function layout() {
-        var animationAndEffects = createAnimationAndEffects(lastRowCount, function (pageIndex) {
-          scope.$apply(function () {
-            if (pageIndex % 2) {
-              block1page = pageIndex;
-            } else {
-              block0page = pageIndex;
-            }
-            updateBlockRows();
-          });
-        });
-
         if (!scrollAnimation) {
           scrollAnimation = touchAnimation({
-            animation: animationAndEffects.animation,
-            effects: animationAndEffects.effects,
+            // TODO: hand in the animation hash and the name of the total animation!
+            animationFactory: animationFactory,
+            effects: ctrl.effects,
             timeToPixelRatio: rowHeight * -1,
             gesture: {type: 'y', element: viewPort},
             startAnimation: 'content'
           });
         } else {
-          scrollAnimation.update(animationAndEffects);
+          scrollAnimation.updateAnimationIfNeeded();
         }
       }
 
-      function updateBlockRows() {
-        scope.block0rows = rows.slice(block0page*rowsPerPage, block0page*rowsPerPage + rowsPerPage);
-        fillMissingRowsInPage(scope.block0rows);
-        scope.block1rows = rows.slice(block1page*rowsPerPage, block1page*rowsPerPage + rowsPerPage);
-        fillMissingRowsInPage(scope.block1rows);
-      }
+    }
 
-      function fillMissingRowsInPage(rows) {
-        var i;
-        for (i=rows.length; i<rowsPerPage; i++) {
-          rows.push({});
-        }
+    function updateBlockRows() {
+      scope.block0rows = lastRows.slice(block0page*rowsPerPage, block0page*rowsPerPage + rowsPerPage);
+      fillMissingRowsInPage(scope.block0rows);
+      scope.block1rows = lastRows.slice(block1page*rowsPerPage, block1page*rowsPerPage + rowsPerPage);
+      fillMissingRowsInPage(scope.block1rows);
+    }
+
+    function fillMissingRowsInPage(rows) {
+      var i;
+      for (i=rows.length; i<rowsPerPage; i++) {
+        rows.push({});
       }
     }
 
-    function createAnimationAndEffects(rowCount, renderPage) {
-      var builder = animationUtils.builder(),
-          effects = [];
-      builder.rowCount = rowCount;
-      ctrl.decorateAnimation(builder, effects);
-      contentAnimation(builder, effects);
+    function fillPage(pageIndex) {
+      scope.$apply(function () {
+        if (pageIndex % 2) {
+          block1page = pageIndex;
+        } else {
+          block0page = pageIndex;
+        }
+        updateBlockRows();
+      });
+    }
 
-      return {
-        animation: builder.build(),
-        effects: effects
-      };
+    function animationFactory(animationSpec) {
+      contentAnimation(animationSpec);
+      ctrl.decorateAnimation(animationSpec);
 
-      function contentAnimation(builder, effects) {
-        var contentDuration = rowCount - (viewPortHeight / rowHeight);
-        var blockDuration = 2 * rowsPerPage,
+      return animationSpec;
+
+      function contentAnimation(animationSpec) {
+        var contentDuration = lastRowCount * rowHeight - viewPortHeight;
+        var blockDuration = 2 * rowsPerPage * rowHeight,
             blockIterations = contentDuration / blockDuration;
 
-        var block0Anim = new Animation(block0[0], [
-          { offset: 0, transform: 'translateZ(0) translateY(100%)' },
-          { offset: 1, transform: 'translateZ(0) translateY(-100%)' }
-        ], {
-          iterationStart: 0.5,
-          duration: blockDuration,
-          iterations: blockIterations
-        });
+        animationSpec.block0 = {
+          type: 'atom',
+          target: block0[0],
+          effect: [
+            { offset: 0, transform: 'translateZ(0) translateY(100%)' },
+            { offset: 1, transform: 'translateZ(0) translateY(-100%)' }
+          ],
+          timing: {
+            iterationStart: 0.5,
+            duration: blockDuration,
+            iterations: blockIterations
+          },
+          events: {
+            oniterate: function(event) {
+              fillPage(event.iterationIndex * 2);
+            }
+          }
+        };
 
-        block0Anim = fixedOnIterate(block0Anim, function(event) {
-          renderPage(event.iterationIndex * 2);
-        });
+        animationSpec.block1 = {
+          type: 'atom',
+          target: block1[0],
+          effect: [
+            { offset: 0, transform: 'translateZ(0) translateY(0%)' },
+            { offset: 1, transform: 'translateZ(0) translateY(-200%)' }
+          ],
+          timing: {
+            duration: blockDuration,
+            iterations: blockIterations
+          },
+          events: {
+            oniterate: function(event) {
+              fillPage(event.iterationIndex * 2 + 1);
+            }
+          }
+        };
 
-        var block1Anim = new Animation(block1[0], [
-          { offset: 0, transform: 'translateZ(0) translateY(0%)' },
-          { offset: 1, transform: 'translateZ(0) translateY(-200%)' }
-        ], {
-          duration: blockDuration,
-          iterations: blockIterations
-        });
-
-        block1Anim = fixedOnIterate(block1Anim, function(event) {
-          renderPage(event.iterationIndex * 2 + 1);
-        });
-
-        builder.addAnimation('content', 50, new ParGroup([block0Anim, block1Anim]));
-
-        effects.push({
-          animationName: 'content',
-          listener: contentEffect
-        });
-
-        function contentEffect(event) {
-          // TODO: Is this the right calculation?
-          var gestureVelocity = event.velocity,
-            oldTime = event.currentTime,
-            newTime = oldTime + gestureVelocity / 2;
-          newTime = Math.max(event.animation.startTime, newTime);
-          newTime = Math.min(event.animation.endTime, newTime);
-          return {
-            targetTime: newTime,
-            duration: Math.abs((newTime - oldTime) / gestureVelocity * 2),
-            easing: 'ease-out'
-          };
-        }
+        animationSpec.content = {
+          type: 'par',
+          // extra information for animation decorators
+          // TODO: Move into a "meta" object
+          rowCount: lastRowCount,
+          rowHeight: rowHeight,
+          children: [
+            'block0',
+            'block1'
+          ]
+        };
+        animationSpec.main = {
+          type: 'seq',
+          children: [ 'content' ]
+        };
       }
     }
+
+
   }
 
   function ScrollerController() {
-    this.animationDecorators = [];
-    var self = this;
-    this.decorateAnimation = function (builder, effects) {
-      angular.forEach(self.animationDecorators, function (decorator) {
-        decorator(builder, effects);
+    var animationDecorators = [];
+    this.effects = [contentEffect];
+    this.addAnimationDecorator = function(order, decorator) {
+      animationDecorators.push({
+        order: order || 0,
+        decorator: decorator
+      });
+    };
+    this.decorateAnimation = function (animationSpec) {
+      var args = arguments;
+      animationDecorators.sort(function(entry1, entry2) {
+        return entry1.order - entry2.order;
+      });
+      angular.forEach(animationDecorators, function (entry) {
+        entry.decorator.apply(this, args);
       });
     };
   }
+
+  // TODO: Move this into a general event handler!
+  function contentEffect(event, touchAnimation) {
+    // TODO: Is this the right calculation?
+    var contentAnimation = touchAnimation.getAnimationByName('content');
+    if (event.currentTime < contentAnimation.startTime || event.currentTime > contentAnimation.endTime) {
+      return false;
+    }
+
+    var gestureVelocity = event.velocity,
+      oldTime = event.currentTime,
+      newTime = oldTime + gestureVelocity / 2;
+    newTime = Math.max(contentAnimation.startTime, newTime);
+    newTime = Math.min(contentAnimation.endTime, newTime);
+
+    // TODO: call the touchAnimation directly
+    return {
+      targetTime: newTime,
+      duration: Math.abs((newTime - oldTime) / gestureVelocity * 2),
+      easing: 'ease-out'
+    };
+  }
+
 }]);

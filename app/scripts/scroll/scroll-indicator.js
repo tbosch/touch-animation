@@ -8,33 +8,54 @@ angular.module('scroll').directive('scrollIndicator', function () {
       element.append(indicator);
       var viewPortHeight = element.height();
 
-      ngScrollerCtrl.animationDecorators.push(animationDecorator);
+      ngScrollerCtrl.addAnimationDecorator(1000, animationDecorator);
 
-      function animationDecorator(builder) {
-        var newCount = builder.rowCount;
-        var indicatorHeight = Math.max(10, viewPortHeight / (ngScrollerCtrl.rowHeight * newCount) * viewPortHeight);
+      function animationDecorator(animationSpec) {
+        var indicatorHeight = Math.max(10, viewPortHeight / (ngScrollerCtrl.rowHeight * animationSpec.content.rowCount) * viewPortHeight);
         indicator[0].style.height = indicatorHeight + 'px';
 
-        builder.addParallelAnimation('header', 'header', function (timing) {
-          return new Animation(indicator[0], [
-            {offset: 0, transform: 'translateZ(0) translateY(-' + (indicatorHeight * 0.5) + 'px)'},
-            {offset: 1, transform: 'translateZ(0) translateY(0)'}
-          ], timing);
-        });
+        if (animationSpec.header) {
+          animationSpec.headerIndicator = {
+            target: indicator[0],
+            type: 'atom',
+            effect: [
+              {offset: 0, transform: 'translateZ(0) translateY(-' + (indicatorHeight * 0.5) + 'px)'},
+              {offset: 1, transform: 'translateZ(0) translateY(0)'}
+            ],
+            timing: {
+              duration: animationSpec.resolvedDuration('header')
+            }
+          };
+          animationSpec.header.children.push('headerIndicator');
+        }
 
-        builder.addParallelAnimation('content', 'content', function (timing) {
-          return new Animation(indicator[0], [
+        animationSpec.contentIndicator = {
+          target: indicator[0],
+          type: 'atom',
+          effect: [
             {offset: 0, transform: 'translateZ(0) translateY(0px)'},
             {offset: 1, transform: 'translateZ(0) translateY(' + (viewPortHeight - indicatorHeight) + 'px)'}
-          ], timing);
-        });
+          ],
+          timing: {
+            duration: animationSpec.resolvedDuration('content')
+          }
+        };
+        animationSpec.content.children.push('contentIndicator');
 
-        builder.addParallelAnimation('footer', 'footer', function (timing) {
-          return new Animation(indicator[0], [
-            {offset: 0, transform: 'translateZ(0) translateY(' + (viewPortHeight - indicatorHeight) + 'px)'},
-            {offset: 1, transform: 'translateZ(0) translateY(' + (viewPortHeight - indicatorHeight + indicatorHeight * 0.5) + 'px)'}
-          ], timing);
-        });
+        if (animationSpec.footer) {
+          animationSpec.footerIndicator = {
+            type: 'atom',
+            target: indicator[0],
+            effect: [
+              {offset: 0, transform: 'translateZ(0) translateY(' + (viewPortHeight - indicatorHeight) + 'px)'},
+              {offset: 1, transform: 'translateZ(0) translateY(' + (viewPortHeight - indicatorHeight + indicatorHeight * 0.5) + 'px)'}
+            ],
+            timing: {
+              duration: animationSpec.resolvedDuration('footer')
+            }
+          };
+          animationSpec.footer.children.push('footerIndicator');
+        }
 
       }
     }

@@ -28,78 +28,22 @@
 
 angular.module('touchAnimation').factory('animationUtils', function() {
   var raf = initRaf();
+  var isArray = angular.isArray,
+    isObject = angular.isObject,
+    isFunction = angular.isFunction;
 
   // TODO: discuss these methods with the web-animations team!
   return {
-    builder: createAnimationBuilder,
     animatePlayerTo: animatePlayerTo,
     stopAnimatePlayer: stopAnimatePlayer,
     raf: raf,
-    indexAnimationByName: indexAnimationByName
+    indexAnimationByName: indexAnimationByName,
+    AnimationSpec: createAnimationSpec(),
+    copy: copy,
+    equals: equals
   };
 
   // ------------------
-
-  function createAnimationBuilder() {
-    var animations = [],
-      parallelAnimations = [];
-
-    return {
-      addAnimation: addAnimation,
-      addParallelAnimation: addParallelAnimation,
-      build: build
-    };
-
-    function addAnimation(name, order, animation) {
-      animation.name = name;
-      animations.push({
-        order: order,
-        animation: animation
-      });
-    }
-
-    function addParallelAnimation(startAnimationName, endAnimationName, factory) {
-      parallelAnimations.push({
-        start: startAnimationName,
-        end: endAnimationName,
-        factory: factory
-      });
-    }
-
-    function build() {
-      var res = new SeqGroup();
-      animations.sort(function(entry1, entry2) {
-        return entry1.order - entry2.order;
-      });
-      var animationsByName = {};
-      angular.forEach(animations, function(entry) {
-        res.append(entry.animation);
-        animationsByName[entry.animation.name] = entry.animation;
-      });
-
-      if (parallelAnimations.length) {
-        var par = new ParGroup();
-        par.append(res);
-        angular.forEach(parallelAnimations, function(entry) {
-          var startAnimation = animationsByName[entry.start],
-            endAnimation = animationsByName[entry.end];
-          if (!startAnimation || !endAnimation) {
-            return;
-          }
-          var start = startAnimation.startTime,
-            end = endAnimation.endTime,
-            animation = entry.factory({
-              delay: start,
-              duration: end - start
-            });
-          par.append(animation);
-        });
-        res = par;
-      }
-      return res;
-    }
-
-  }
 
   function initRaf() {
     var nativeRaf = window.requestAnimationFrame ||
@@ -186,4 +130,201 @@ angular.module('touchAnimation').factory('animationUtils', function() {
     });
     return target;
   }
+
+  function createAnimationSpec() {
+    function AnimationSpec() {
+
+    }
+
+    AnimationSpec.prototype = {
+      resolvedDuration: resolvedDuration,
+      build: build
+    };
+
+    function resolvedDuration(partName) {
+      var self = this,
+          part = this[partName],
+          timing = part.timing || {};
+      if (!part) {
+        throw new Error('Could not find part '+partName);
+      }
+      var base = timing.duration;
+      var result;
+      if (!base) {
+        base = 0;
+        if (part.type === 'par') {
+          angular.forEach(part.children, function(childName) {
+            base = Math.max(base, self.resolvedDuration(childName));
+          });
+        } else if (part.type === 'seq') {
+          angular.forEach(part.children, function(childName) {
+            base += self.resolvedDuration(childName);
+          });
+        }
+      }
+      if (timing.iterations) {
+        base = base * timing.iterations;
+      }
+      return base;
+    }
+
+    function build() {
+      var spec = this;
+      var builtParts = {};
+
+      angular.forEach(spec, function(part, name) {
+        build(name);
+      });
+
+      return builtParts;
+
+      function build(partName) {
+        var part = builtParts[partName],
+            events;
+        if (!part) {
+          var partSpec = spec[partName],
+              part;
+          if (!partSpec) {
+            throw new Error('Could not find the spec for animation '+partName);
+          }
+          if (partSpec.type === 'atom') {
+            part = new Animation(partSpec.target, partSpec.effect, partSpec.timing);
+          } else if (partSpec.type === 'seq') {
+            var children = [];
+            angular.forEach(partSpec.children, function(childName) {
+              children.push(build(childName));
+            });
+            part = new SeqGroup(children, partSpec.timing);
+          } else if (partSpec.type === 'par') {
+            var children = [];
+            angular.forEach(partSpec.children, function(childName) {
+              children.push(build(childName));
+            });
+            part = new ParGroup(children, partSpec.timing);
+          } else {
+            throw new Error('Unknown animation type '+partSpec.type);
+          }
+          events = partSpec.events;
+          if (events) {
+            if (events.oniterate) {
+              // apply bugfix for oniterate
+              part = fixedOnIterate(part, events.oniterate);
+            }
+            if (events.onstart) {
+              part.onstart = events.onstart;
+            }
+             if (events.onend) {
+               part.onend = event.onend;
+             }
+          }
+        }
+        return builtParts[partName] = part;
+      }
+    }
+
+    return AnimationSpec;
+  }
+
+  // Copy of the angular method, but it also ignores DOM nodes
+  function copy(source, destination){
+    if (isWindow(source) || isScope(source)) {
+      throw Error(
+        "Can't copy! Making copies of Window or Scope instances is not supported.");
+    }
+
+    if (!destination) {
+      destination = source;
+      if (source) {
+        if (isArray(source)) {
+          destination = copy(source, []);
+        } else if (isDate(source)) {
+          destination = new Date(source.getTime());
+        } else if (isRegExp(source)) {
+          destination = new RegExp(source.source);
+        } else if (isObject(source) && !isDOMNode(source)) {
+          destination = copy(source, {});
+        }
+      }
+    } else {
+      if (source === destination) throw Error(
+        "Can't copy! Source and destination are identical.");
+      if (isArray(source)) {
+        destination.length = 0;
+        for ( var i = 0; i < source.length; i++) {
+          destination.push(copy(source[i]));
+        }
+      } else {
+        angular.forEach(destination, function(value, key){
+          delete destination[key];
+        });
+        for ( var key in source) {
+          destination[key] = copy(source[key]);
+        }
+      }
+    }
+    return destination;
+  }
+
+  // Copy of the angular method, but it also ignores DOM nodes
+  function equals(o1, o2) {
+    if (o1 === o2) return true;
+    if (o1 === null || o2 === null) return false;
+    if (o1 !== o1 && o2 !== o2) return true; // NaN === NaN
+    var t1 = typeof o1, t2 = typeof o2, length, key, keySet;
+    if (t1 == t2) {
+      if (t1 == 'object') {
+        if (isArray(o1)) {
+          if (!isArray(o2)) return false;
+          if ((length = o1.length) == o2.length) {
+            for(key=0; key<length; key++) {
+              if (!equals(o1[key], o2[key])) return false;
+            }
+            return true;
+          }
+        } else if (isDate(o1)) {
+          return isDate(o2) && o1.getTime() == o2.getTime();
+        } else if (isRegExp(o1) && isRegExp(o2)) {
+          return o1.toString() == o2.toString();
+        } else {
+          if (isScope(o1) || isScope(o2) || isWindow(o1) || isWindow(o2) || isArray(o2) || isDOMNode(o2)) return false;
+          keySet = {};
+          for(key in o1) {
+            if (key.charAt(0) === '$' || isFunction(o1[key])) continue;
+            if (!equals(o1[key], o2[key])) return false;
+            keySet[key] = true;
+          }
+          for(key in o2) {
+            if (!keySet.hasOwnProperty(key) &&
+              key.charAt(0) !== '$' &&
+              o2[key] !== undefined &&
+              !isFunction(o2[key])) return false;
+          }
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function isRegExp(value) {
+    return toString.call(value) === '[object RegExp]';
+  }
+
+  function isWindow(obj) {
+    return obj && obj.document && obj.location && obj.alert && obj.setInterval;
+  }
+
+  function isScope(obj) {
+    return obj && obj.$evalAsync && obj.$watch;
+  }
+
+  function isDate(value){
+    return toString.call(value) === '[object Date]';
+  }
+
+  function isDOMNode(value) {
+    return value && value.nodeName;
+  }
+
+
 });

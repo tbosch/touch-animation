@@ -1,16 +1,25 @@
 angular.module('touchAnimation').factory('touchAnimation', ['animationGesture', 'animationUtils', function(animationGesture, animationUtils) {
+
+  // negative, so that the user can scroll to the top
+  // but the animation goes forward.
+  var TIME_TO_PIXEL_RATIO = -1;
+
   return touchAnimationFactory;
 
   function touchAnimationFactory(options) {
     var player,
-      effects,
-      animationsByName;
+      effects = options.effects || [],
+      animationsByName,
+      self,
+      startAnimation = options.startAnimation,
+      animationFactory = options.animationFactory;
 
-    update(options);
+    updateAnimationIfNeeded();
     animationGesture(options.gesture.element, options.gesture.type, gestureListener);
 
-    return {
-      update: update
+    return self = {
+      updateAnimationIfNeeded: updateAnimationIfNeeded,
+      getAnimationByName: getAnimationByName
     };
 
     function gestureListener(event) {
@@ -20,14 +29,14 @@ angular.module('touchAnimation').factory('touchAnimation', ['animationGesture', 
         event.gesture.playerStartTime = player.currentTime;
       }
       if (action === 'move' || action === 'start') {
-        var newTime = event.gesture.playerStartTime + (pixelOffset / options.timeToPixelRatio);
+        var newTime = event.gesture.playerStartTime + (pixelOffset / TIME_TO_PIXEL_RATIO);
         if (newTime<0) {
           newTime = 0;
         }
         player.currentTime = newTime;
       }
       if (action === 'end') {
-        var gestureVelocity = event.gesture.current.velocity / options.timeToPixelRatio;
+        var gestureVelocity = event.gesture.current.velocity / TIME_TO_PIXEL_RATIO;
         executeEffects(gestureVelocity);
       }
       if (action === 'prepare') {
@@ -35,39 +44,48 @@ angular.module('touchAnimation').factory('touchAnimation', ['animationGesture', 
       }
     }
 
-    function update(options) {
-      effects = options.effects || [];
-      animationsByName = animationUtils.indexAnimationByName(options.animation);
+    function getAnimationByName(name) {
+      return animationsByName[name];
+    }
+
+    var lastAnimationSpec;
+    function updateAnimationIfNeeded() {
+      var animationSpec = new animationUtils.AnimationSpec();
+      animationFactory(animationSpec);
+      if (animationUtils.equals(animationSpec, lastAnimationSpec)) {
+        return;
+      }
+      lastAnimationSpec = animationUtils.copy(animationSpec);
+      animationsByName = animationSpec.build();
 
       if (!player) {
-        player = document.timeline.play(options.animation);
+        player = document.timeline.play(animationsByName.main);
         player.paused = true;
-        if (options.startAnimation) {
-          var startTime = animationsByName[options.startAnimation].startTime;
-          if (startTime) {
-            player.currentTime = startTime;
-          }
+        if (startAnimation) {
+          var startTime = animationsByName[startAnimation].startTime;
+          player.currentTime = startTime;
         }
       } else {
-        player.source = options.animation;
+        player.source = animationsByName.main;
       }
     }
 
     function executeEffects(currentVelocity) {
-      var now = player.currentTime;
-      var effect = findEffect(now);
-      if (!effect) {
-        return;
-      }
-      var animation = effect.listener({
-        currentTime: now,
-        velocity: currentVelocity,
-        animation: effect.animation
-      });
-      if (animation) {
-        var targetTime = animation.targetTime;
-        targetTime = boundedTime(targetTime);
-        animationUtils.animatePlayerTo(player, targetTime, animation.duration, animation.easing || 'linear');
+      var i, effect, animation, now;
+      now = player.currentTime;
+      for (i=0; i<effects.length; i++) {
+        effect = effects[i];
+        animation = effect({
+          currentTime: now,
+          velocity: currentVelocity,
+          animation: effect.animation
+        }, self);
+        if (animation) {
+          var targetTime = animation.targetTime;
+          targetTime = boundedTime(targetTime);
+          animationUtils.animatePlayerTo(player, targetTime, animation.duration, animation.easing || 'linear');
+          return;
+        }
       }
     }
 
@@ -77,24 +95,5 @@ angular.module('touchAnimation').factory('touchAnimation', ['animationGesture', 
       return targetTime;
     }
 
-     function findEffect(time) {
-      time = boundedTime(time);
-      var i, effect, animation, start, end;
-      for (i=0; i<effects.length; i++) {
-        effect = effects[i];
-        animation = animationsByName[effect.animationName];
-        start = animation.startTime;
-        end = animation.endTime;
-        // TODO: this should be only "< end". However,
-        // animationEnd seems to be inclusive...
-        if (time >= start && time <= end) {
-          return {
-            listener: effect.listener,
-            animation: animation
-          };
-        }
-      }
-      return null;
-    }
   }
 }]);
