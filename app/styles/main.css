@@ -17,10 +17,11 @@ body {
     color: #333;
     font-size: 20px;
 }
+/* bugfix for iOS as it renders inputs and buttons with radius borders very slowly! */
 input,button {
     font-size: 20px;
     outline: none;
-    /* bugfix for iOS as it renders inputs and buttons with radius borders very slowly! */
+    border: 0;
     -webkit-border-radius: 0px;
 }
 
@@ -60,39 +61,33 @@ div.scroll-viewport {
 
 .todo-item {
     background: #fafafa;
+    padding: 6px;
 }
 .todo-action {
     position: absolute;
     right: 20px;
-    height: 100%;
     top: 0;
 }
 
 .todo-toggle {
-    -webkit-appearance: none;
-    outline: none
-}
-.todo-toggle:after {
-    content: '✔';
     line-height: 43px;
-    font-size: 20px;
+    font-size: 30px;
     height: 40px;
-    padding: 6px;
+    padding-right: 10px;
+}
+.todo-toggle-off {
     color: #d9d9d9;
 }
-.todo-toggle:checked:after {
+.todo-toggle-on {
     color: #85ada7;
 }
 .todo-input {
     width: 80%;
-    height: 100%;
-    font-size: 24px;
-    padding: 6px;
+    font-size: 20px;
 }
 .todo-text {
     font-size: 24px;
 }
-
 .todo-done {
     text-decoration: line-through;
 }

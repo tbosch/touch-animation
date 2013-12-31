@@ -9,7 +9,7 @@ angular.module('scroll').directive('scrollHeader', function () {
         headerDuration = headerHeight * headerFooterSlowDownFactor;
 
       ngScrollerCtrl.addAnimationDecorator(0, animationDecorator);
-      element.parent().on('slideYEnd', headerEffect);
+      element.parent().on('swipeendy', headerEffect);
 
       function animationDecorator(animationSpec) {
         animationSpec.header = {

@@ -24,6 +24,7 @@ angular.module('scroll').directive('scroller', ['touchAnimation', '$compile', fu
   function link(scope, viewPort, attrs, ctrl, rowTemplate) {
 
     ctrl.rowHeight = calcRowHeight();
+    console.log(ctrl.rowHeight);
 
     var innerViewPort = angular.element(viewPort[0].querySelectorAll('.inner-viewport'));
     var blocks = createBlockElements(),
@@ -93,8 +94,8 @@ angular.module('scroll').directive('scroller', ['touchAnimation', '$compile', fu
           gesture: {type: 'y', element: viewPort}
         });
         ctrl.scrollAnimation.goTo(ctrl.scrollAnimation.getAnimationByName('content').startTime);
-        viewPort.on('slideYEnd', contentEffect);
-        viewPort.on('pointerstart', stopContentEffect);
+        viewPort.on('swipeendy', contentEffect);
+        viewPort.on('pointerdown', stopContentEffect);
       } else {
         ctrl.scrollAnimation.updateAnimationIfNeeded();
       }
@@ -190,8 +191,8 @@ angular.module('scroll').directive('scroller', ['touchAnimation', '$compile', fu
     var _stopContentEffect;
     function stopContentEffect() {
       if (_stopContentEffect) {
-        stopContentEffect();
-        stopContentEffect = null;
+        _stopContentEffect();
+        _stopContentEffect = null;
       }
     }
 

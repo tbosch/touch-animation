@@ -7,7 +7,7 @@ angular.module('demo').directive('leftSwipeable', ['touchAnimation', '$rootEleme
         gesture: {type: 'x', element: element}
       });
 
-      element.on('slideXEnd', closestHideOrShow);
+      element.on('swipeendx', closestHideOrShow);
       var clearParentEventListener = $rootElement.on('pointerdown', hideIfOnOtherElement);
       element.on('$destroy', clearParentEventListener);
 

@@ -10,20 +10,20 @@ angular.module('scroll').directive('scrollIndicator', function () {
       element.append(indicatorBar);
       var indicatorHeight;
 
-      indicatorBar.on('slideYStart', function(event, gesture) {
+      indicatorBar.on('swipestarty', function(event, gesture) {
         gesture.stopPropagation();
       });
-      indicatorBar.on('slideYMove', function(event, gesture) {
+      indicatorBar.on('swipemovey', function(event, gesture) {
         gesture.stopPropagation();
       });
-      indicatorBar.on('slideYEnd', function(event, gesture) {
+      indicatorBar.on('swipeendy', function(event, gesture) {
         gesture.stopPropagation();
       });
       var gestureStartTime;
-      indicator.on('slideYStart', function(event, gesture) {
+      indicator.on('swipestarty', function(event, gesture) {
         gestureStartTime = ngScrollerCtrl.scrollAnimation.currentTime();
       });
-      indicator.on('slideYMove', function(event, gesture) {
+      indicator.on('swipemovey', function(event, gesture) {
         var contentAnimation = ngScrollerCtrl.scrollAnimation.getAnimationByName('content');
         var newTime = gestureStartTime + (gesture.offset * contentAnimation.duration / (ngScrollerCtrl.viewPortHeight - indicatorHeight));
         newTime = Math.max(newTime, contentAnimation.startTime);
@@ -35,7 +35,7 @@ angular.module('scroll').directive('scrollIndicator', function () {
       ngScrollerCtrl.addAnimationDecorator(1000, animationDecorator);
 
       function animationDecorator(animationSpec) {
-        indicatorHeight = Math.max(10, ngScrollerCtrl.viewPortHeight / (ngScrollerCtrl.rowHeight * ngScrollerCtrl.rowCount) * ngScrollerCtrl.viewPortHeight);
+        indicatorHeight = Math.max(50, ngScrollerCtrl.viewPortHeight / (ngScrollerCtrl.rowHeight * ngScrollerCtrl.rowCount) * ngScrollerCtrl.viewPortHeight);
         indicator[0].style.height = indicatorHeight + 'px';
 
         if (animationSpec.header) {

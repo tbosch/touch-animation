@@ -31,6 +31,10 @@
       event.type = 'move';
     }
 
+    if (pressStart && !gestureStart && event.type==='end') {
+      trigger(pressStart.target, 'tap', event);
+    }
+
     handleGesture(event);
 
     if (event.type === 'end') {
@@ -73,7 +77,7 @@
         velocity: gestureStart.velocity(newOffset) * 1000
       };
 
-      triggerGestureEvent(event.pressed?'Move':'End', gesture);
+      triggerGestureEvent(event.pressed?'move':'end', gesture);
       if (!event.pressed) {
         gestureStart = null;
       }
@@ -101,14 +105,13 @@
           offset: 0,
           velocity: 0
         };
-        triggerGestureEvent('Start', gesture);
+        triggerGestureEvent('start', gesture);
       }
     }
   }
 
-  // TODO: rename the events in all lowercase and "swipe" instead of "slide"
   function triggerGestureEvent(suffix, gesture) {
-    trigger(gestureStart.target, 'slide'+gestureStart.gestureType.toUpperCase()+suffix, gesture);
+    trigger(gestureStart.target, 'swipe'+suffix+gestureStart.gestureType, gesture);
   }
 
   function getPos(event) {

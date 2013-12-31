@@ -1,10 +1,17 @@
-angular.module('touchAnimation', []).factory('touchAnimation', [function() {
+angular.module('touchAnimation', []).
+  directive('ngTap', function() {
+    return {
+      link: function(scope, element, attr) {
+        element.on('tap', function() {
+          scope.$apply(attr.ngTap);
+        });
+      }
+    };
+  }).
+  factory('touchAnimation', [function() {
 
   var raf = initRaf();
   var AnimationSpec = createAnimationSpec();
-  var isArray = angular.isArray,
-    isObject = angular.isObject,
-    isFunction = angular.isFunction;
 
   addJqWidthHeight(angular.element.prototype);
 
@@ -20,10 +27,10 @@ angular.module('touchAnimation', []).factory('touchAnimation', [function() {
     updateAnimationIfNeeded();
 
     var gestureStartTime;
-    mainElement.on('slide'+options.gesture.type.toUpperCase()+'Start', function(e, gesture) {
+    mainElement.on('swipestart'+options.gesture.type, function(e, gesture) {
       gestureStartTime = player.currentTime;
     });
-    mainElement.on('slide'+options.gesture.type.toUpperCase()+'Move', function(e, gesture) {
+    mainElement.on('swipemove'+options.gesture.type, function(e, gesture) {
       var newTime = gestureStartTime + (gesture.offset * -1);
       newTime = Math.max(newTime, animationsByName.main.startTime);
       newTime = Math.min(newTime, animationsByName.main.endTime);
@@ -65,11 +72,27 @@ angular.module('touchAnimation', []).factory('touchAnimation', [function() {
     var lastAnimationSpec;
     function updateAnimationIfNeeded() {
       var animationSpec = new AnimationSpec();
+      var targets = {};
       animationFactory(animationSpec);
-      if (equals(animationSpec, lastAnimationSpec)) {
+      // delete all the target elements, so we can use
+      // angular's copy and equals methods
+      angular.forEach(animationSpec, function(part, name) {
+        if (part.target) {
+          targets[name] = part.target;
+          part.target = null;
+        }
+      });
+      if (angular.equals(animationSpec, lastAnimationSpec)) {
         return;
       }
-      lastAnimationSpec = copy(animationSpec);
+      lastAnimationSpec = angular.copy(animationSpec);
+      // copy back the target elements...
+      angular.forEach(animationSpec, function(part, name) {
+        if (targets[name]) {
+          part.target = targets[name];
+        }
+      });
+
       animationsByName = animationSpec.build();
 
       if (!player) {
@@ -263,107 +286,6 @@ angular.module('touchAnimation', []).factory('touchAnimation', [function() {
     }
 
     return AnimationSpec;
-  }
-
-  // Copy of the angular method, but it also ignores DOM nodes
-  function copy(source, destination){
-    if (isWindow(source) || isScope(source)) {
-      throw Error(
-        "Can't copy! Making copies of Window or Scope instances is not supported.");
-    }
-
-    if (!destination) {
-      destination = source;
-      if (source) {
-        if (isArray(source)) {
-          destination = copy(source, []);
-        } else if (isDate(source)) {
-          destination = new Date(source.getTime());
-        } else if (isRegExp(source)) {
-          destination = new RegExp(source.source);
-        } else if (isObject(source) && !isDOMNode(source)) {
-          destination = copy(source, {});
-        }
-      }
-    } else {
-      if (source === destination) throw Error(
-        "Can't copy! Source and destination are identical.");
-      if (isArray(source)) {
-        destination.length = 0;
-        for ( var i = 0; i < source.length; i++) {
-          destination.push(copy(source[i]));
-        }
-      } else {
-        angular.forEach(destination, function(value, key){
-          delete destination[key];
-        });
-        for ( var key in source) {
-          destination[key] = copy(source[key]);
-        }
-      }
-    }
-    return destination;
-  }
-
-  // Copy of the angular method, but it also ignores DOM nodes
-  function equals(o1, o2) {
-    if (o1 === o2) return true;
-    if (o1 === null || o2 === null) return false;
-    if (o1 !== o1 && o2 !== o2) return true; // NaN === NaN
-    var t1 = typeof o1, t2 = typeof o2, length, key, keySet;
-    if (t1 == t2) {
-      if (t1 == 'object') {
-        if (isArray(o1)) {
-          if (!isArray(o2)) return false;
-          if ((length = o1.length) == o2.length) {
-            for(key=0; key<length; key++) {
-              if (!equals(o1[key], o2[key])) return false;
-            }
-            return true;
-          }
-        } else if (isDate(o1)) {
-          return isDate(o2) && o1.getTime() == o2.getTime();
-        } else if (isRegExp(o1) && isRegExp(o2)) {
-          return o1.toString() == o2.toString();
-        } else {
-          if (isScope(o1) || isScope(o2) || isWindow(o1) || isWindow(o2) || isArray(o2) || isDOMNode(o2)) return false;
-          keySet = {};
-          for(key in o1) {
-            if (key.charAt(0) === '$' || isFunction(o1[key])) continue;
-            if (!equals(o1[key], o2[key])) return false;
-            keySet[key] = true;
-          }
-          for(key in o2) {
-            if (!keySet.hasOwnProperty(key) &&
-              key.charAt(0) !== '$' &&
-              o2[key] !== undefined &&
-              !isFunction(o2[key])) return false;
-          }
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  function isRegExp(value) {
-    return toString.call(value) === '[object RegExp]';
-  }
-
-  function isWindow(obj) {
-    return obj && obj.document && obj.location && obj.alert && obj.setInterval;
-  }
-
-  function isScope(obj) {
-    return obj && obj.$evalAsync && obj.$watch;
-  }
-
-  function isDate(value){
-    return toString.call(value) === '[object Date]';
-  }
-
-  function isDOMNode(value) {
-    return value && value.nodeName;
   }
 
 }]);

@@ -9,7 +9,7 @@ angular.module('scroll').directive('scrollFooter', function () {
         footerDuration = footerHeight * headerFooterSlowDownFactor;
 
       ngScrollerCtrl.addAnimationDecorator(0, animationDecorator);
-      element.parent().on('slideYEnd', footerEffect);
+      element.parent().on('swipeendy', footerEffect);
 
       function animationDecorator(animationSpec) {
         animationSpec.footer = {

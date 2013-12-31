@@ -12,8 +12,8 @@
     <body ng-controller="ScrollController as scroll">
 
     <div class="header">
-        <button class="btn-normal" ng-click="scroll.addRows(20)">Add 20</button>
-        Double click to edit, swipe left to delete.
+        <button class="btn-normal" ng-tap="scroll.addRows(20)">Add 20</button>
+        Tap: edit, swipe: delete
     </div>
 
     <div class="content" scroller="scroll.rows" scroll-indicator>
@@ -23,15 +23,14 @@
         <div scroll-footer>
             Bottom...
         </div>
-        <div scroll-row class="todo-row" ng-class="{'todo-done': row.done}">
-            <button class="todo-action btn-danger" ng-click="scroll.delete(row)">
+        <div scroll-row class="todo-row">
+            <button class="todo-action btn-danger" ng-tap="scroll.delete(row)">
                 Delete
             </button>
-            <div left-swipeable class="todo-item" ng-dblclick="scroll.editRow=row">
-                <input type="checkbox" ng-model="row.done" class="todo-toggle">
-
+            <div left-swipeable class="todo-item">
+                <span class="todo-toggle" ng-class="{'todo-toggle-on': row.done, 'todo-toggle-off': !row.done}" ng-tap="row.done = !row.done">✔</span>
                 <input type="text" ng-model="row.text" ng-blur="scroll.editRow=null" ng-show="scroll.editRow===row" class="todo-input">
-                <span ng-show="scroll.editRow!==row" ng-bind="row.text" class="todo-text"></span>
+                <span ng-show="scroll.editRow!==row" ng-bind="row.text" ng-tap="scroll.editRow=row" class="todo-text" ng-class="{'todo-done': row.done}"></span>
             </div>
         </div>
     </div>
@@ -42,7 +41,6 @@
         </p>
         -->
 
-    <script src="bower_components/fastclick/lib/fastclick.js"></script>
     <script src="bower_components/angular/angular.js"></script>
     <script src="scripts/web-animations.js"></script>
     <script src="scripts/web-animations-fixes.js"></script>

@@ -9,14 +9,17 @@
     height: 100%; position:relative
 }
 .scroll-indicator {
-    position:absolute;right:3px;top:0;z-index:1;
-    width:13px;
-    background-color:red
+    position:absolute;right:0px;top:0;z-index:1;
+    width:20px;
+    padding-right: 2px;
+    padding-left: 3px;
+    background-color:red;
 }
 .scroll-indicator-bar {
     position:absolute;right:0;top:0;z-index:1;
     width:20px;height:100%;
     background-color:aliceblue;
+    margin-left: 40px;
 }
 .scroll-header {
     position:absolute;bottom:100%;width:100%
