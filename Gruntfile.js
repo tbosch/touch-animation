@@ -274,7 +274,8 @@ module.exports = function (grunt) {
                 'copy:styles'
             ],
             dist: [
-                'compass',
+
+                // TODO: enable compass again 'compass',
                 'copy:styles',
                 'imagemin',
                 'svgmin',

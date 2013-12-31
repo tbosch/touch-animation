@@ -5,8 +5,14 @@
         <title>touchanimation</title>
         <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
 
+        <!-- build:css styles/vendor.css -->
+        <!-- bower:css -->
+        <!-- endbower -->
+        <!-- endbuild -->
+        <!-- build:css(.tmp) styles/main.css -->
         <link rel="stylesheet" href="styles/main.css">
         <link rel="stylesheet" href="styles/scroller.css">
+        <!-- endbuild -->
 
     </head>
     <body ng-controller="ScrollController as scroll">
@@ -29,8 +35,8 @@
             </button>
             <div left-swipeable class="todo-item">
                 <span class="todo-toggle" ng-class="{'todo-toggle-on': row.done, 'todo-toggle-off': !row.done}" ng-tap="row.done = !row.done">✔</span>
-                <input type="text" ng-model="row.text" ng-blur="scroll.editRow=null" ng-show="scroll.editRow===row" class="todo-input">
-                <span ng-show="scroll.editRow!==row" ng-bind="row.text" ng-tap="scroll.editRow=row" class="todo-text" ng-class="{'todo-done': row.done}"></span>
+                <input type="text" ng-model="row.text" ng-blur="scroll.editRow=null" ng-if="scroll.editRow===row" class="todo-input">
+                <span ng-if="scroll.editRow!==row" ng-bind="row.text" ng-tap="scroll.editRow=row" class="todo-text" ng-class="{'todo-done': row.done}"></span>
             </div>
         </div>
     </div>
@@ -41,10 +47,15 @@
         </p>
         -->
 
+    <!-- build:js scripts/vendor.js -->
+    <!-- bower:js -->
     <script src="bower_components/angular/angular.js"></script>
-    <script src="scripts/web-animations.js"></script>
-    <script src="scripts/web-animations-fixes.js"></script>
+    <!-- endbower -->
+    <script src="third-party/web-animations.js"></script>
+    <script src="third-party/web-animations-fixes.js"></script>
+    <!-- endbuild -->
 
+    <!-- build:js scripts/main.js -->
     <script src="scripts/touch-animation/gesture-events.js"></script>
     <script src="scripts/touch-animation/touch-animation.js"></script>
     <script src="scripts/scroll/module.js"></script>
@@ -55,34 +66,7 @@
     <script src="scripts/scroll/scroll-pull-to-refresh.js"></script>
     <script src="scripts/module.js"></script>
     <script src="scripts/left-swipeable.js"></script>
-
-    <script>
-        var mod = angular.module('scroll');
-
-        mod.controller('ScrollController', function() {
-            var i;
-            this.rows = [];
-            this.addRows = function(count) {
-                var i, row;
-                for (i=0; i<count; i++) {
-                    row = {index: this.rows.length, text: 'todo no '+this.rows.length};
-                    // row.clicked = i % 3 === 0;
-                    this.rows.push(row);
-
-                }
-            };
-            this.addRows(40);
-            this.delete = function(row) {
-                var i;
-                for (i=0; i<this.rows.length; i++) {
-                    if (this.rows[i] === row) {
-                        this.rows.splice(i, 1);
-                        return;
-                    }
-                }
-            }
-        });
-    </script>
+    <!-- endbuild -->
     </body>
 </html>
 

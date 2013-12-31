@@ -23,7 +23,7 @@ angular.module('scroll').directive('scrollIndicator', function () {
       indicator.on('swipestarty', function(event, gesture) {
         gestureStartTime = ngScrollerCtrl.scrollAnimation.currentTime();
       });
-      indicator.on('swipemovey', function(event, gesture) {
+      indicatorBar.on('swipemovey', function(event, gesture) {
         var contentAnimation = ngScrollerCtrl.scrollAnimation.getAnimationByName('content');
         var newTime = gestureStartTime + (gesture.offset * contentAnimation.duration / (ngScrollerCtrl.viewPortHeight - indicatorHeight));
         newTime = Math.max(newTime, contentAnimation.startTime);
