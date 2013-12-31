@@ -1,8 +1,8 @@
-# touch animations
+# Touch animations
 
 This is a demo of touch aware animations using the [web-animations](https://github.com/web-animations/web-animations-js) polyfill.
 
-Live demo: [http://tbosch.github.io/touchanimation](http://tbosch.github.io/touchanimation)
+Live demo: [http://tbosch.github.io/touch-animation](http://tbosch.github.io/touch-animation)
 
 ## Run locally
 
