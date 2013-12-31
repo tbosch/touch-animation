@@ -1,4 +1,4 @@
-angular.module('scroll').directive('scroller', ['touchAnimation', 'animationUtils', function (touchAnimation, animationUtils) {
+angular.module('scroll').directive('scroller', ['touchAnimation', '$compile', function (touchAnimation, $compile) {
   return {
     compile: function (element) {
       element.addClass('scroll-viewport');
@@ -7,20 +7,11 @@ angular.module('scroll').directive('scroller', ['touchAnimation', 'animationUtil
         throw new Error('The scroller directive requires a child div with a "scroll-row" directive');
       }
       scrollContent.addClass('scroll-row');
-
-      var block0 = angular.element('<div class="scroll-block0"></div>'),
-          block0row = scrollContent.clone();
-      block0row.attr('ng-repeat', 'row in block0rows track by $index');
-      block0.append(block0row);
-      element.append(block0);
-
-      var block1 = angular.element('<div class="scroll-block1"></div>'),
-          block1row = scrollContent.clone();
-      block1row.attr('ng-repeat', 'row in block1rows track by $index');
-      block1.append(block1row);
-      element.append(block1);
-
       scrollContent.remove();
+
+      var innerViewport = angular.element('<div class="inner-viewport"></div>');
+      innerViewport.append(element.children());
+      element.append(innerViewport);
 
       return function(scope, element, attrs, ctrl) {
         link(scope, element, attrs, ctrl, scrollContent);
@@ -32,59 +23,83 @@ angular.module('scroll').directive('scroller', ['touchAnimation', 'animationUtil
 
   function link(scope, viewPort, attrs, ctrl, rowTemplate) {
 
-    viewPort.append(rowTemplate);
-    var rowHeight = rowTemplate.height();
-    ctrl.rowHeight = rowHeight;
-    rowTemplate.remove();
+    var rowHeight = ctrl.rowHeight = calcRowHeight();
 
-    var innerViewport = angular.element('<div class="inner-viewport"></div>'),
-      block0 = angular.element(viewPort[0].querySelector('.scroll-block0')),
-      block1 = angular.element(viewPort[0].querySelector('.scroll-block1'));
-
-    innerViewport.append(viewPort.children());
-    viewPort.append(innerViewport);
-    innerViewport.append(block0);
-    innerViewport.append(block1);
+    var innerViewPort = angular.element(viewPort[0].querySelectorAll('.inner-viewport'));
+    var blocks = createBlockElements(),
+      block0 = blocks.block0, block1 = blocks.block1,
+      blocksScope = blocks.scope;
 
     var block0page = 0,
-        block1page = 1;
-
-    var viewPortHeight,
+        block1page = 1,
+        viewPortHeight,
         rowsPerPage;
 
     scope.$watchCollection(attrs.scroller, rowsChanged);
 
     return;
 
+    function calcRowHeight() {
+      viewPort.append(rowTemplate);
+      var rowHeight = rowTemplate.height();
+      rowTemplate.remove();
+      return rowHeight;
+    }
+
+    function createBlockElements() {
+      var blocks = angular.element('<div></div>');
+
+      var block0 = angular.element('<div class="scroll-block0"></div>'),
+        block0row = rowTemplate.clone();
+      block0row.attr('ng-repeat', 'row in block0rows track by $index');
+      block0.append(block0row);
+
+      var block1 = angular.element('<div class="scroll-block1"></div>'),
+        block1row = rowTemplate.clone();
+      block1row.attr('ng-repeat', 'row in block1rows track by $index');
+      block1.append(block1row);
+
+      var blocksScope = scope.$new();
+      blocks.append(block0);
+      blocks.append(block1);
+
+      innerViewPort.append(blocks);
+      $compile(blocks)(blocksScope);
+
+      return {
+        scope: blocksScope,
+        block0: block0,
+        block1: block1
+      };
+    }
+
     var lastRowCount, lastRows;
+    // TODO: Add a resize listener to call this method also!
     function rowsChanged(rows) {
-      // TODO: Add a resize listener and update those variables only then!
+      lastRows = rows;
+      lastRowCount = rows.length;
+
+      layout();
+    }
+
+    function layout() {
       viewPortHeight = viewPort.height();
       rowsPerPage = Math.ceil(viewPortHeight / rowHeight) + 1;
-      lastRows = rows;
 
       updateBlockRows();
 
-      if (rows.length !== lastRowCount) {
-        lastRowCount = rows.length;
-        layout();
+      if (!ctrl.scrollAnimation) {
+        ctrl.scrollAnimation = touchAnimation({
+          animationFactory: animationFactory,
+          timeToPixelRatio: rowHeight * -1,
+          gesture: {type: 'y', element: viewPort}
+        });
+        ctrl.scrollAnimation.goTo(ctrl.scrollAnimation.getAnimationByName('content').startTime);
+        viewPort.on('slideYEnd', contentEffect);
+        viewPort.on('pointerstart', stopContentEffect);
+      } else {
+        ctrl.scrollAnimation.updateAnimationIfNeeded();
       }
-
-      function layout() {
-        if (!ctrl.scrollAnimation) {
-          ctrl.scrollAnimation = touchAnimation({
-            animationFactory: animationFactory,
-            timeToPixelRatio: rowHeight * -1,
-            gesture: {type: 'y', element: viewPort}
-          });
-          ctrl.scrollAnimation.goTo(ctrl.scrollAnimation.getAnimationByName('content').startTime);
-          viewPort.on('slideYEnd', contentEffect);
-          viewPort.on('pointerstart', stopContentEffect);
-        } else {
-          ctrl.scrollAnimation.updateAnimationIfNeeded();
-        }
-      }
-
     }
 
     function updateBlockRows() {
@@ -102,7 +117,7 @@ angular.module('scroll').directive('scroller', ['touchAnimation', 'animationUtil
     }
 
     function fillPage(pageIndex) {
-      scope.$apply(function () {
+      blocksScope.$apply(function () {
         if (pageIndex % 2) {
           block1page = pageIndex;
         } else {
@@ -166,6 +181,7 @@ angular.module('scroll').directive('scroller', ['touchAnimation', 'animationUtil
           // TODO: Move into a "meta" object in the animationSpec
           // which is copied into the real animationsByName hash!
           // -> by this, e.g. the effects can use it too!
+          // See scroll-indicator!
           rowCount: lastRowCount,
           rowHeight: rowHeight,
           children: [

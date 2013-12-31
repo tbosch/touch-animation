@@ -27,10 +27,8 @@
       trigger(pressStart.target, 'pointerdown');
     } else if (!event.pressed && pressStart) {
       event.type = 'end';
-      event.startEvent = pressStart;
     } else if (pressStart && event.pressed) {
       event.type = 'move';
-      event.startEvent = pressStart;
     }
 
     handleGesture(event);
@@ -45,10 +43,17 @@
     if (target.nodeName) {
       target = angular.element(target);
     }
-    while (target.length) {
+    var stopped = false;
+    data = data || {};
+    // TODO: Can't inspect the event that Angular creates during
+    // triggerHandler. That's why we add another stopPropagation
+    // to the data...
+    data.stopPropagation = function() {
+      stopped = true;
+    };
+    while (target.length && !stopped) {
       target.triggerHandler(type, data);
       target = target.parent();
-      // TODO: Allow stopPropagation, ...!
     }
   }
 
@@ -143,29 +148,6 @@
     $rootElement.on("scroll", function(e) {
       e.preventDefault();
     });
-  }
-
-
-  // TODO: Use this!
-  function rafThrottledEventListener(listener) {
-    var nextMoveEvent = null;
-    return function(event) {
-      if (event.type === 'move') {
-        if (!nextMoveEvent) {
-          nextMoveEvent = event;
-          animationUtils.raf(function() {
-            listener(nextMoveEvent);
-            nextMoveEvent = null;
-          });
-        } else {
-          nextMoveEvent = event;
-        }
-      } else {
-        animationUtils.raf(function() {
-          listener(event);
-        });
-      }
-    };
   }
 
   function velocity() {

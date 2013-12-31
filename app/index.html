@@ -3,35 +3,10 @@
     <head>
         <meta charset="utf-8">
         <title>touchanimation</title>
-        <meta name="viewport" content="width=device-width">
+        <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
 
         <link rel="stylesheet" href="styles/main.css">
         <link rel="stylesheet" href="styles/scroller.css">
-
-
-        <style>
-            /* custom rules */
-            .scroll-block0 {
-                border: 1px solid yellow
-            }
-
-            .scroll-block1 {
-                border: 1px solid blue
-            }
-
-            /* bugfix for iOS performance bug with inputs/buttons */
-            input,button {
-                -webkit-border-radius: 0px;
-            }
-            input[type="checkbox"] {
-                -webkit-appearance: none;
-                width: 10px; height: 10px;
-                border: 1px solid black
-            }
-            input:checked {
-                background-color: grey
-            }
-        </style>
 
     </head>
     <body style="height: 100%;" ng-controller="ScrollController as scroll">
@@ -45,11 +20,16 @@
         <div scroll-footer style="background-color:grey;height:40px;">
             Bottom...
         </div>
-        <div scroll-row swipe-to-delete>
-            <label>
-                <input type="checkbox" ng-model="row.clicked">
-                Row <span ng-bind="row.index" ></span>
-            </label>
+        <div scroll-row class="todo">
+            <div class="todo-action" ng-click="scroll.delete(row)">
+                Delete
+            </div>
+            <div swipe-left-actions class="todo-item">
+                <label>
+                    <input type="checkbox" ng-model="row.clicked">
+                    Row <span ng-bind="row.index" ></span> and some more text
+                </label>
+            </div>
         </div>
     </div>
         <!--
@@ -59,12 +39,12 @@
         </p>
         -->
 
+    <script src="bower_components/fastclick/lib/fastclick.js"></script>
     <script src="bower_components/angular/angular.js"></script>
     <script src="scripts/web-animations.js"></script>
     <script src="scripts/web-animations-fixes.js"></script>
 
     <script src="scripts/touch-animation/module.js"></script>
-    <script src="scripts/touch-animation/animation-utils.js"></script>
     <script src="scripts/touch-animation/gesture-events.js"></script>
     <script src="scripts/touch-animation/touch-animation.js"></script>
     <script src="scripts/scroll/module.js"></script>
@@ -73,7 +53,7 @@
     <script src="scripts/scroll/scroll-footer.js"></script>
     <script src="scripts/scroll/scroll-indicator.js"></script>
     <script src="scripts/scroll/scroll-pull-to-refresh.js"></script>
-    <script src="scripts/scroll/swipeToDelete.js"></script>
+    <script src="scripts/swipe-left-actions.js"></script>
 
     <script>
         var mod = angular.module('scroll');
@@ -91,9 +71,16 @@
                 }
             };
             this.addRows(40);
+            this.delete = function(row) {
+                var i;
+                for (i=0; i<this.rows.length; i++) {
+                    if (this.rows[i] === row) {
+                        this.rows.splice(i, 1);
+                        return;
+                    }
+                }
+            }
         });
-
-
     </script>
     </body>
 </html>

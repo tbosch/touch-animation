@@ -1,0 +1,45 @@
+/* show the virtual blocks during scrolling */
+.scroll-block0 {
+    border: 1px solid yellow
+}
+.scroll-block1 {
+    border: 1px solid blue
+}
+
+/* bugfix for iOS performance bug with inputs/buttons in virtual scrolling lists */
+input,button {
+    -webkit-border-radius: 0px;
+}
+input[type="checkbox"] {
+    -webkit-appearance: none;
+    width: 15px; height: 15px;
+    border: 2px solid black
+}
+input:checked {
+    background-color: grey
+}
+
+/* app */
+body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: #333;
+}
+
+.todo {
+    font-size: 20px;
+    border: 1px solid white;
+    position: relative
+}
+
+.todo-item {
+    background: #fafafa;
+}
+
+.todo-action {
+    position: absolute;
+    right: 20px;
+    height: 100%;
+    top: 0;
+    background: red
+}
+
