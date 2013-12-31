@@ -8,7 +8,6 @@ angular.module('scroll').directive('scrollIndicator', function () {
       var indicatorBar = angular.element('<div class="scroll-indicator-bar"></div>');
       indicatorBar.append(indicator);
       element.append(indicatorBar);
-      var viewPortHeight = element.height();
       var indicatorHeight;
 
       indicatorBar.on('slideYStart', function(event, gesture) {
@@ -26,7 +25,7 @@ angular.module('scroll').directive('scrollIndicator', function () {
       });
       indicator.on('slideYMove', function(event, gesture) {
         var contentAnimation = ngScrollerCtrl.scrollAnimation.getAnimationByName('content');
-        var newTime = gestureStartTime + (gesture.offset * contentAnimation.duration / (viewPortHeight - indicatorHeight));
+        var newTime = gestureStartTime + (gesture.offset * contentAnimation.duration / (ngScrollerCtrl.viewPortHeight - indicatorHeight));
         newTime = Math.max(newTime, contentAnimation.startTime);
         newTime = Math.min(newTime, contentAnimation.endTime);
         ngScrollerCtrl.scrollAnimation.goTo(newTime);
@@ -36,9 +35,7 @@ angular.module('scroll').directive('scrollIndicator', function () {
       ngScrollerCtrl.addAnimationDecorator(1000, animationDecorator);
 
       function animationDecorator(animationSpec) {
-        // TODO: Move this into the meta data of the animation,
-        // so that the slideYMove event listener can read it!
-        indicatorHeight = Math.max(10, viewPortHeight / (ngScrollerCtrl.rowHeight * animationSpec.content.rowCount) * viewPortHeight);
+        indicatorHeight = Math.max(10, ngScrollerCtrl.viewPortHeight / (ngScrollerCtrl.rowHeight * ngScrollerCtrl.rowCount) * ngScrollerCtrl.viewPortHeight);
         indicator[0].style.height = indicatorHeight + 'px';
 
         if (animationSpec.header) {
@@ -61,7 +58,7 @@ angular.module('scroll').directive('scrollIndicator', function () {
           type: 'atom',
           effect: [
             {offset: 0, transform: 'translateZ(0) translateY(0px)'},
-            {offset: 1, transform: 'translateZ(0) translateY(' + (viewPortHeight - indicatorHeight) + 'px)'}
+            {offset: 1, transform: 'translateZ(0) translateY(' + (ngScrollerCtrl.viewPortHeight - indicatorHeight) + 'px)'}
           ],
           timing: {
             duration: animationSpec.resolvedDuration('content')
@@ -74,8 +71,8 @@ angular.module('scroll').directive('scrollIndicator', function () {
             type: 'atom',
             target: indicator[0],
             effect: [
-              {offset: 0, transform: 'translateZ(0) translateY(' + (viewPortHeight - indicatorHeight) + 'px)'},
-              {offset: 1, transform: 'translateZ(0) translateY(' + (viewPortHeight - indicatorHeight + indicatorHeight * 0.5) + 'px)'}
+              {offset: 0, transform: 'translateZ(0) translateY(' + (ngScrollerCtrl.viewPortHeight - indicatorHeight) + 'px)'},
+              {offset: 1, transform: 'translateZ(0) translateY(' + (ngScrollerCtrl.viewPortHeight - indicatorHeight + indicatorHeight * 0.5) + 'px)'}
             ],
             timing: {
               duration: animationSpec.resolvedDuration('footer')

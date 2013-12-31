@@ -1,32 +1,59 @@
-/* show the virtual blocks during scrolling */
+/* debugging: show the virtual blocks during scrolling
 .scroll-block0 {
     border: 1px solid yellow
 }
 .scroll-block1 {
     border: 1px solid blue
 }
+ */
 
-/* bugfix for iOS performance bug with inputs/buttons in virtual scrolling lists */
-input,button {
-    -webkit-border-radius: 0px;
+/* browser resets */
+html,body {
+    margin: 0;
+    padding: 0
 }
-input[type="checkbox"] {
-    -webkit-appearance: none;
-    width: 15px; height: 15px;
-    border: 2px solid black
-}
-input:checked {
-    background-color: grey
-}
-
-/* app */
 body {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     color: #333;
+    font-size: 20px;
+}
+input,button {
+    font-size: 20px;
+    outline: none;
+    /* bugfix for iOS as it renders inputs and buttons with radius borders very slowly! */
+    -webkit-border-radius: 0px;
 }
 
-.todo {
-    font-size: 20px;
+/* main layout*/
+html {
+    height: 100%;
+}
+body {
+    padding-top: 50px;
+    position:absolute;
+    top:0; bottom:0; left:0; right:0;
+}
+.header {
+    margin-top: -50px;
+    height: 50px
+}
+.content {
+    height: 100%
+}
+
+
+/* scroller */
+div.scroll-viewport {
+    border: 1px solid black;
+}
+.scroll-header, .scroll-footer {
+    background-color:grey;
+    height:40px;
+    text-align: center
+}
+
+/* items in the list */
+.todo-row {
     border: 1px solid white;
     position: relative
 }
@@ -34,12 +61,63 @@ body {
 .todo-item {
     background: #fafafa;
 }
-
 .todo-action {
     position: absolute;
     right: 20px;
     height: 100%;
     top: 0;
-    background: red
 }
 
+.todo-toggle {
+    -webkit-appearance: none;
+    outline: none
+}
+.todo-toggle:after {
+    content: '✔';
+    line-height: 43px;
+    font-size: 20px;
+    height: 40px;
+    padding: 6px;
+    color: #d9d9d9;
+}
+.todo-toggle:checked:after {
+    color: #85ada7;
+}
+.todo-input {
+    width: 80%;
+    height: 100%;
+    font-size: 24px;
+    padding: 6px;
+}
+.todo-text {
+    font-size: 24px;
+}
+
+.todo-done {
+    text-decoration: line-through;
+}
+
+
+/* buttons */
+.btn-normal, .btn-danger {
+    padding: 6px 12px;
+}
+.btn-normal {
+    color: #fff;
+    background-color: #428bca;
+    border: 1px solid #357ebd;
+}
+.btn-normal:active,.btn-normal:focus  {
+    background-color: #3276b1;
+    border: 1px solid #285e8e;
+}
+.btn-danger {
+    color: #fff;
+    background-color: #d9534f;
+    border: 1px solid #d43f3a;
+}
+.btn-danger:hover, .btn-danger:hover {
+    color: #fff;
+    background-color: #d2322d;
+    border: 1px solid #ac2925;
+}

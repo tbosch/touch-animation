@@ -23,7 +23,7 @@ angular.module('scroll').directive('scroller', ['touchAnimation', '$compile', fu
 
   function link(scope, viewPort, attrs, ctrl, rowTemplate) {
 
-    var rowHeight = ctrl.rowHeight = calcRowHeight();
+    ctrl.rowHeight = calcRowHeight();
 
     var innerViewPort = angular.element(viewPort[0].querySelectorAll('.inner-viewport'));
     var blocks = createBlockElements(),
@@ -31,9 +31,7 @@ angular.module('scroll').directive('scroller', ['touchAnimation', '$compile', fu
       blocksScope = blocks.scope;
 
     var block0page = 0,
-        block1page = 1,
-        viewPortHeight,
-        rowsPerPage;
+        block1page = 1;
 
     scope.$watchCollection(attrs.scroller, rowsChanged);
 
@@ -73,25 +71,25 @@ angular.module('scroll').directive('scroller', ['touchAnimation', '$compile', fu
       };
     }
 
-    var lastRowCount, lastRows;
+    var lastRows;
     // TODO: Add a resize listener to call this method also!
     function rowsChanged(rows) {
       lastRows = rows;
-      lastRowCount = rows.length;
+      ctrl.rowCount = rows.length;
 
       layout();
     }
 
     function layout() {
-      viewPortHeight = viewPort.height();
-      rowsPerPage = Math.ceil(viewPortHeight / rowHeight) + 1;
+      ctrl.viewPortHeight = viewPort.height();
+      ctrl.rowsPerPage = Math.ceil(ctrl.viewPortHeight / ctrl.rowHeight) + 1;
 
       updateBlockRows();
 
       if (!ctrl.scrollAnimation) {
         ctrl.scrollAnimation = touchAnimation({
           animationFactory: animationFactory,
-          timeToPixelRatio: rowHeight * -1,
+          timeToPixelRatio: ctrl.rowHeight * -1,
           gesture: {type: 'y', element: viewPort}
         });
         ctrl.scrollAnimation.goTo(ctrl.scrollAnimation.getAnimationByName('content').startTime);
@@ -103,15 +101,15 @@ angular.module('scroll').directive('scroller', ['touchAnimation', '$compile', fu
     }
 
     function updateBlockRows() {
-      scope.block0rows = lastRows.slice(block0page*rowsPerPage, block0page*rowsPerPage + rowsPerPage);
+      scope.block0rows = lastRows.slice(block0page*ctrl.rowsPerPage, block0page*ctrl.rowsPerPage + ctrl.rowsPerPage);
       fillMissingRowsInPage(scope.block0rows);
-      scope.block1rows = lastRows.slice(block1page*rowsPerPage, block1page*rowsPerPage + rowsPerPage);
+      scope.block1rows = lastRows.slice(block1page*ctrl.rowsPerPage, block1page*ctrl.rowsPerPage + ctrl.rowsPerPage);
       fillMissingRowsInPage(scope.block1rows);
     }
 
     function fillMissingRowsInPage(rows) {
       var i;
-      for (i=rows.length; i<rowsPerPage; i++) {
+      for (i=rows.length; i<ctrl.rowsPerPage; i++) {
         rows.push({});
       }
     }
@@ -134,8 +132,8 @@ angular.module('scroll').directive('scroller', ['touchAnimation', '$compile', fu
       return animationSpec;
 
       function contentAnimation(animationSpec) {
-        var contentDuration = lastRowCount * rowHeight - viewPortHeight;
-        var blockDuration = 2 * rowsPerPage * rowHeight,
+        var contentDuration = ctrl.rowCount * ctrl.rowHeight - ctrl.viewPortHeight;
+        var blockDuration = 2 * ctrl.rowsPerPage * ctrl.rowHeight,
             blockIterations = contentDuration / blockDuration;
 
         animationSpec.block0 = {
@@ -177,13 +175,6 @@ angular.module('scroll').directive('scroller', ['touchAnimation', '$compile', fu
 
         animationSpec.content = {
           type: 'par',
-          // extra information for animation decorators
-          // TODO: Move into a "meta" object in the animationSpec
-          // which is copied into the real animationsByName hash!
-          // -> by this, e.g. the effects can use it too!
-          // See scroll-indicator!
-          rowCount: lastRowCount,
-          rowHeight: rowHeight,
           children: [
             'block0',
             'block1'

@@ -1,5 +1,5 @@
 <!doctype html>
-<html ng-app="scroll">
+<html ng-app="demo">
     <head>
         <meta charset="utf-8">
         <title>touchanimation</title>
@@ -9,26 +9,29 @@
         <link rel="stylesheet" href="styles/scroller.css">
 
     </head>
-    <body style="height: 100%;" ng-controller="ScrollController as scroll">
+    <body ng-controller="ScrollController as scroll">
 
-    <button ng-click="scroll.addRows(20)">Add 20</button>
+    <div class="header">
+        <button class="btn-normal" ng-click="scroll.addRows(20)">Add 20</button>
+        Double click to edit, swipe left to delete.
+    </div>
 
-    <div scroller="scroll.rows" scroll-indicator style="height: 400px; border: 1px solid black;">
-        <div scroll-header style="background-color:grey;height:40px;">
-            <div style="text-align: center" scroll-pull-to-refresh>Pull to refresh</div>
+    <div class="content" scroller="scroll.rows" scroll-indicator>
+        <div scroll-header>
+            <div class="pull-to-refresh" scroll-pull-to-refresh>Pull to refresh</div>
         </div>
-        <div scroll-footer style="background-color:grey;height:40px;">
+        <div scroll-footer>
             Bottom...
         </div>
-        <div scroll-row class="todo">
-            <div class="todo-action" ng-click="scroll.delete(row)">
+        <div scroll-row class="todo-row" ng-class="{'todo-done': row.done}">
+            <button class="todo-action btn-danger" ng-click="scroll.delete(row)">
                 Delete
-            </div>
-            <div swipe-left-actions class="todo-item">
-                <label>
-                    <input type="checkbox" ng-model="row.clicked">
-                    Row <span ng-bind="row.index" ></span> and some more text
-                </label>
+            </button>
+            <div left-swipeable class="todo-item" ng-dblclick="scroll.editRow=row">
+                <input type="checkbox" ng-model="row.done" class="todo-toggle">
+
+                <input type="text" ng-model="row.text" ng-blur="scroll.editRow=null" ng-show="scroll.editRow===row" class="todo-input">
+                <span ng-show="scroll.editRow!==row" ng-bind="row.text" class="todo-text"></span>
             </div>
         </div>
     </div>
@@ -44,7 +47,6 @@
     <script src="scripts/web-animations.js"></script>
     <script src="scripts/web-animations-fixes.js"></script>
 
-    <script src="scripts/touch-animation/module.js"></script>
     <script src="scripts/touch-animation/gesture-events.js"></script>
     <script src="scripts/touch-animation/touch-animation.js"></script>
     <script src="scripts/scroll/module.js"></script>
@@ -53,7 +55,8 @@
     <script src="scripts/scroll/scroll-footer.js"></script>
     <script src="scripts/scroll/scroll-indicator.js"></script>
     <script src="scripts/scroll/scroll-pull-to-refresh.js"></script>
-    <script src="scripts/swipe-left-actions.js"></script>
+    <script src="scripts/module.js"></script>
+    <script src="scripts/left-swipeable.js"></script>
 
     <script>
         var mod = angular.module('scroll');
@@ -64,7 +67,7 @@
             this.addRows = function(count) {
                 var i, row;
                 for (i=0; i<count; i++) {
-                    row = {index: this.rows.length};
+                    row = {index: this.rows.length, text: 'todo no '+this.rows.length};
                     // row.clicked = i % 3 === 0;
                     this.rows.push(row);
 

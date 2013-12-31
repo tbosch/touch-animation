@@ -2,11 +2,12 @@ angular.module('scroll').directive('scrollFooter', function () {
   return {
     require: '^scroller',
     link: function (scope, element, attrs, ngScrollerCtrl) {
+      element.addClass('scroll-footer');
+
       var headerFooterSlowDownFactor = 5,
         footerHeight = element.height(),
         footerDuration = footerHeight * headerFooterSlowDownFactor;
 
-      element.addClass('scroll-footer');
       ngScrollerCtrl.addAnimationDecorator(0, animationDecorator);
       element.parent().on('slideYEnd', footerEffect);
 

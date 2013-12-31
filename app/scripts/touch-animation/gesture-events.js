@@ -24,7 +24,7 @@
     if (event.pressed && !pressStart) {
       pressStart = event;
       event.type = 'start';
-      trigger(pressStart.target, 'pointerdown');
+      trigger(pressStart.target, 'pointerdown', event);
     } else if (!event.pressed && pressStart) {
       event.type = 'end';
     } else if (pressStart && event.pressed) {
@@ -34,7 +34,7 @@
     handleGesture(event);
 
     if (event.type === 'end') {
-      trigger(pressStart.target, 'pointerup');
+      trigger(pressStart.target, 'pointerup', event);
       pressStart = null;
     }
   }
@@ -48,6 +48,7 @@
     // TODO: Can't inspect the event that Angular creates during
     // triggerHandler. That's why we add another stopPropagation
     // to the data...
+    // TODO: Set event.target in the event that is fired by triggerHandler!
     data.stopPropagation = function() {
       stopped = true;
     };
@@ -105,6 +106,7 @@
     }
   }
 
+  // TODO: rename the events in all lowercase and "swipe" instead of "slide"
   function triggerGestureEvent(suffix, gesture) {
     trigger(gestureStart.target, 'slide'+gestureStart.gestureType.toUpperCase()+suffix, gesture);
   }

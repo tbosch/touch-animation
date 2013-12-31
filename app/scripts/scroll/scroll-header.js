@@ -2,12 +2,12 @@ angular.module('scroll').directive('scrollHeader', function () {
   return {
     require: '^scroller',
     link: function (scope, element, attrs, ngScrollerCtrl) {
+      element.addClass('scroll-header');
+
       var headerFooterSlowDownFactor = 5,
-      // estimate header/footer as high as a row
         headerHeight = element.height(),
         headerDuration = headerHeight * headerFooterSlowDownFactor;
 
-      element.addClass('scroll-header');
       ngScrollerCtrl.addAnimationDecorator(0, animationDecorator);
       element.parent().on('slideYEnd', headerEffect);
 

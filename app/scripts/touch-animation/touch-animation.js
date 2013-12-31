@@ -1,4 +1,4 @@
-angular.module('touchAnimation').factory('touchAnimation', [function() {
+angular.module('touchAnimation', []).factory('touchAnimation', [function() {
 
   var raf = initRaf();
   var AnimationSpec = createAnimationSpec();
